@@ -1,0 +1,380 @@
+<!-- @format -->
+<!-- @format -->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta name="viewport" content="width=device-width" />
+
+        <!-- For development, pass document through inliner 
+        <link rel="stylesheet" href="simple.css" data-inline />-->
+
+        <style type="text/css">
+            /** @format */
+
+            * {
+                margin: 0;
+                padding: 0;
+                font-size: 100%;
+                font-family: "Avenir Next", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
+                line-height: 1.65;
+            }
+
+            img {
+                max-width: 100%;
+                margin: 0 auto;
+                display: block;
+            }
+
+            body,
+            .body-wrap {
+                width: 100% !important;
+                height: 100%;
+                background: #f8f8f8;
+            }
+
+            a {
+                color: #71bc37;
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            .text-center {
+                text-align: center;
+            }
+
+            .text-right {
+                text-align: right;
+            }
+
+            .text-left {
+                text-align: left;
+            }
+
+            .button {
+                display: inline-block;
+                color: white;
+                background: #71bc37;
+                border: solid #71bc37;
+                border-width: 10px 20px 8px;
+                font-weight: bold;
+                border-radius: 4px;
+            }
+
+            .button:hover {
+                text-decoration: none;
+            }
+
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+                margin-bottom: 20px;
+                line-height: 1.25;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            h2 {
+                font-size: 28px;
+            }
+
+            h3 {
+                font-size: 24px;
+            }
+
+            h4 {
+                font-size: 20px;
+            }
+
+            h5 {
+                font-size: 16px;
+            }
+
+            p,
+            ul,
+            ol {
+                font-size: 16px;
+                margin-bottom: 20px;
+            }
+
+            ul,
+            ol {
+                margin-left: 2em;
+            }
+
+            li {
+                margin-bottom: 0.4em;
+            }
+
+            th {
+                color: #71bc37;
+                text-align: left;
+            }
+
+            .container {
+                display: block !important;
+                clear: both !important;
+                margin: 0 auto !important;
+                max-width: 580px !important;
+            }
+
+            .container table {
+                width: 100% !important;
+                border-collapse: collapse;
+            }
+
+            .container .masthead {
+                padding: 80px 0;
+                background: #71bc37;
+                color: white;
+            }
+
+            .container .masthead h1 {
+                margin: 0 auto !important;
+                max-width: 90%;
+                text-transform: uppercase;
+            }
+
+            .container .content {
+                background: white;
+                color: #555;
+                padding: 30px 35px;
+            }
+
+            .container .content .bold {
+                font-weight: bold !important;
+            }
+
+            .nopadding p {
+                margin-bottom: 3px;
+            }
+
+            .container .content.footer {
+                background: none;
+            }
+
+            .container .content.footer p {
+                margin-bottom: 0;
+                color: #888;
+                text-align: left;
+                font-size: 12px;
+            }
+
+            .container .content.footer a {
+                color: #888;
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            .container .content.footer a:hover {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+
+    <body>
+        <table class="body-wrap">
+            <tr>
+                <td class="container">
+                    <!-- Message start -->
+                    <table>
+                        <tr>
+                            <td align="center" class="masthead">
+                                <h1>Your payment has been waived!</h1>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="content">
+                                <h2>Hello <%= submission.patron.fname%>,</h2>
+
+                                <p>
+                                    The payment for your 3D print submission has been waived. The files in this
+                                    submission are listed below for your convenience.
+                                </p>
+
+                                <table style="table-layout: fixed; margin-bottom: 1.5em">
+                                    <% fileNames.forEach(function(file){ %>
+                                    <tr>
+                                        <td>
+                                            <p style="margin-bottom: 0px"><strong><%= file %></strong></p>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                </table>
+
+                                <p>
+                                    These files are now in our ready to print queue and will be printed in the order
+                                    they were recieved. Please be aware that while we try to print submission as fast as
+                                    possible, there are times in each semester when our queue is exceptionally full.
+                                    Senior design is one of these times, and while we make every effort to print every
+                                    submission as quickly as possible, we cannot be responsible for printing your
+                                    project by a specific date.
+                                </p>
+                                <p>
+                                    Senior design students who need finished projects by a strict deadline should make
+                                    every effort to only print objects that cannot be obtained in any other way.
+                                    Examples from previous semesters include nuts, bolts, screws, square and round rods,
+                                    flat rectangular sheets, and other common hardware and building materials. These
+                                    objects can easily be found at nay hardware store, and we encourage those with a
+                                    deadline to purchase these objects themselves as opposed to printing them. This
+                                    reduces the number of files that must be printed on our machines, which means
+                                    everyone gets their completed submissions faster.
+                                </p>
+                                <p>
+                                    Thank you for your understanding and your patience as we continue to grow and
+                                    improve as a makerspace!
+                                </p>
+                                <p>
+                                    If you have any questions, please reach out to us at
+                                    <a href="mailto:TheSpark@unt.edu">TheSpark@unt.edu</a>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td class="container">
+                    <!-- Message start -->
+                    <table
+                        style="
+                            font-size: 10pt;
+                            color: #2a2a2a;
+                            margin-top: 20px;
+                            background: white;
+                            border-collapse: unset !important;
+                            padding: 30px;
+                        "
+                        cellpadding="0"
+                        cellspacing="0"
+                    >
+                        <tbody style="vertical-align: top">
+                            <tr>
+                                <td
+                                    colspan="3"
+                                    style="
+                                        border-bottom: 1px solid #008000;
+                                        padding-bottom: 10px;
+                                        padding-top: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        vertical-align: top;
+                                    "
+                                    valign="top"
+                                >
+                                    <strong
+                                        ><span style="font-size: 14pt; color: #008000"
+                                            >The Spark Makerspace</span
+                                        ></strong
+                                    ><br />
+                                    <span style="font-size: 10pt">University of North Texas</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    colspan="3"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                    "
+                                >
+                                    <span
+                                        >Email us any time at <a href="mailto:thespark@unt.edu">TheSpark@unt.edu</a> or
+                                        call us at the numbers below:</span
+                                    >
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    width="66%"
+                                    colspan="2"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                    "
+                                    valign="top"
+                                >
+                                    <span style="font-size: 10pt"
+                                        ><strong>Willis Library</strong> - Room 135<span><br /></span
+                                    ></span>
+                                    <span style="font-size: 10pt"
+                                        ><strong>Discovery Park</strong> - Room M130<span><br /></span
+                                    ></span>
+                                </td>
+                                <td
+                                    width="33%"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                        text-align: end;
+                                    "
+                                    valign="top"
+                                >
+                                    <span style="font-size: 10pt"
+                                        >(940) 369-5259<span><br /></span
+                                    ></span>
+                                    <span style="font-size: 10pt"
+                                        >(940) 565-3175<span><br /></span
+                                    ></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    colspan="3"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                    "
+                                >
+                                    <span style="font-size: 10pt"
+                                        >Please visit us at
+                                        <a href="https://guides.library.unt.edu/spark"
+                                            >https://guides.library.unt.edu/spark</a
+                                        >
+                                        for our hours.</span
+                                    >
+                                </td>
+                            </tr>
+                            <tr>
+                                <td width="33%" style="padding-top: 20px">
+                                    <span> <a href="https://untmakerspace.podbean.com">PodBean</a></span>
+                                </td>
+                                <td width="33%" style="padding-top: 20px; text-align: center">
+                                    <span>Apple Podcasts</span>
+                                </td>
+                                <td width="33%" style="padding-top: 20px; text-align: end">
+                                    <span><a href="https://blogs.library.unt.edu/spark/ ">Check out our blog!</a></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

@@ -1,0 +1,424 @@
+<!-- @format -->
+<!-- @format -->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta name="viewport" content="width=device-width" />
+
+        <!-- For development, pass document through inliner 
+        <link rel="stylesheet" href="simple.css" data-inline />-->
+
+        <style type="text/css">
+            /** @format */
+
+            * {
+                margin: 0;
+                padding: 0;
+                font-size: 100%;
+                font-family: "Avenir Next", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
+                line-height: 1.65;
+            }
+
+            img {
+                max-width: 100%;
+                margin: 0 auto;
+                display: block;
+            }
+
+            body,
+            .body-wrap {
+                width: 100% !important;
+                height: 100%;
+                background: #f8f8f8;
+            }
+
+            a {
+                color: #71bc37;
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            .text-center {
+                text-align: center;
+            }
+
+            .text-right {
+                text-align: right;
+            }
+
+            .text-left {
+                text-align: left;
+            }
+
+            .button {
+                display: inline-block;
+                color: white;
+                background: #71bc37;
+                border: solid #71bc37;
+                border-width: 10px 20px 8px;
+                font-weight: bold;
+                border-radius: 4px;
+            }
+
+            .button:hover {
+                text-decoration: none;
+            }
+
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+                margin-bottom: 20px;
+                line-height: 1.25;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            h2 {
+                font-size: 28px;
+            }
+
+            h3 {
+                font-size: 24px;
+            }
+
+            h4 {
+                font-size: 20px;
+            }
+
+            h5 {
+                font-size: 16px;
+            }
+
+            p,
+            ul,
+            ol {
+                font-size: 16px;
+                margin-bottom: 20px;
+            }
+
+            ul,
+            ol {
+                margin-left: 2em;
+            }
+
+            li {
+                margin-bottom: 0.4em;
+            }
+
+            th {
+                color: #71bc37;
+                text-align: left;
+            }
+
+            .container {
+                display: block !important;
+                clear: both !important;
+                margin: 0 auto !important;
+                max-width: 580px !important;
+            }
+
+            .container table {
+                width: 100% !important;
+                border-collapse: collapse;
+            }
+
+            .container .masthead {
+                padding: 80px 0;
+                background: #71bc37;
+                color: white;
+            }
+
+            .container .masthead h1 {
+                margin: 0 auto !important;
+                max-width: 90%;
+                text-transform: uppercase;
+            }
+
+            .container .content {
+                background: white;
+                color: #555;
+                padding: 30px 35px;
+            }
+
+            .container .content .bold {
+                font-weight: bold !important;
+            }
+
+            .nopadding p {
+                margin-bottom: 3px;
+            }
+
+            .container .content.footer {
+                background: none;
+            }
+
+            .container .content.footer p {
+                margin-bottom: 0;
+                color: #888;
+                text-align: left;
+                font-size: 12px;
+            }
+
+            .container .content.footer a {
+                color: #888;
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            .container .content.footer a:hover {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+
+    <body>
+        <table class="body-wrap">
+            <tr>
+                <td class="container">
+                    <!-- Message start -->
+                    <table>
+                        <tr>
+                            <td align="center" class="masthead">
+                                <h1>We have recieved your submission!</h1>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="content">
+                                <h2>Hello <%= submission.patron.fname%>,</h2>
+
+                                <p>
+                                    This email is a confirmation that your 3D print submission has been recorded in the
+                                    Spark 3D Print Service Review Queue. The files we received were:
+                                </p>
+
+                                <table style="table-layout: fixed; margin-bottom: 1.5em">
+                                    <% fileNames.forEach(function(file){ %>
+                                    <tr>
+                                        <td>
+                                            <p style="margin-bottom: 0px"><strong><%= file %></strong></p>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                </table>
+
+                                <h4>
+                                    Now that you've submitted your files for printing, here&apos;s what you can expect
+                                    during the review process:
+                                </h4>
+
+                                <ol>
+                                    <li>
+                                        <strong>Your files are in our review queue,</strong> but the Spark Team will
+                                        need to evaluate them based on our current printing capabilities. We evaluate
+                                        files in the order we receive them, so please be patient, and we will send you
+                                        an email once this review is complete.
+                                    </li>
+                                    <li>Once your files are reviewed, one of three things will happen:</li>
+                                    <ul>
+                                        <li>
+                                            <strong>If your files can be printed as they were submitted,</strong> you
+                                            will receive an email with our review notes and a link through which you can
+                                            pay for your requested files. If you've changed your mind, simply ignore the
+                                            payment link. If you would like to contact us for assistance in reducing
+                                            your files' print time, and thus cost, please send us an email at
+                                            <a href="mailto:TheSpark@unt.edu">TheSpark@unt.edu</a>, or visit our website
+                                            at
+                                            <a (href="https://guides.library.unt.edu/spark"
+                                                >guides.library.unt.edu/spark</a
+                                            >
+                                            to schedule a consultation! Note that while print requests for educational
+                                            purposes will have their payment waived, a link for payment will still be
+                                            generated. If you indicated that your request was for a class or other
+                                            educational purpose, the team will submit your request for a payment waive.
+                                            In this case, you may safely ignore the payment request link.
+                                        </li>
+                                        <li>
+                                            <strong>If your files cannot be printed</strong> for any reason, or if they
+                                            will print but will not have the desired functionality due to design or
+                                            printer limitations, you will instead receive an email with the review notes
+                                            with improvement guidelines if applicable. Once again, reach out to us
+                                            through email or on our website if you need any assistance.
+                                        </li>
+                                        <li>
+                                            <strong>If some but not all your files were approved,</strong> you will
+                                            receive an email indicating which files were accepted and which were
+                                            rejected, and a link through which to pay for only those which were
+                                            accepted.
+                                        </li>
+                                    </ul>
+                                </ol>
+                                <h4>
+                                    If some or all of your files were approved, the next stage of the process is as
+                                    follows:
+                                </h4>
+                                <ol>
+                                    <li>
+                                        Your files will be stored until payment is processed, or if your request is for
+                                        educational purposes, briefly while the payment is waived.
+                                    </li>
+                                    <li>
+                                        Once payment or waiver is complete, your files will be moved into the printing
+                                        queue and will be printed in the order it was received.
+                                    </li>
+                                    <li>
+                                        If your request contains multiple files, you will receive an email once each
+                                        file is completed with the details and location for pickup. Note that completed
+                                        prints that are not picked up within 14 days of completion will not be kept any
+                                        longer.
+                                    </li>
+                                </ol>
+                                <p>
+                                    If you have any questions, please reach out to us at
+                                    <a href="mailto:TheSpark@unt.edu">TheSpark@unt.edu</a>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td class="container">
+                    <!-- Message start -->
+                    <table
+                        style="
+                            font-size: 10pt;
+                            color: #2a2a2a;
+                            margin-top: 20px;
+                            background: white;
+                            border-collapse: unset !important;
+                            padding: 30px;
+                        "
+                        cellpadding="0"
+                        cellspacing="0"
+                    >
+                        <tbody style="vertical-align: top">
+                            <tr>
+                                <td
+                                    colspan="3"
+                                    style="
+                                        border-bottom: 1px solid #008000;
+                                        padding-bottom: 10px;
+                                        padding-top: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        vertical-align: top;
+                                    "
+                                    valign="top"
+                                >
+                                    <strong
+                                        ><span style="font-size: 14pt; color: #008000"
+                                            >The Spark Makerspace</span
+                                        ></strong
+                                    ><br />
+                                    <span style="font-size: 10pt">University of North Texas</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    colspan="3"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                    "
+                                >
+                                    <span
+                                        >Email us any time at <a href="mailto:thespark@unt.edu">TheSpark@unt.edu</a> or
+                                        call us at the numbers below:</span
+                                    >
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    width="66%"
+                                    colspan="2"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                    "
+                                    valign="top"
+                                >
+                                    <span style="font-size: 10pt"
+                                        ><strong>Willis Library</strong> - Room 135<span><br /></span
+                                    ></span>
+                                    <span style="font-size: 10pt"
+                                        ><strong>Discovery Park</strong> - Room M130<span><br /></span
+                                    ></span>
+                                </td>
+                                <td
+                                    width="33%"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                        text-align: end;
+                                    "
+                                    valign="top"
+                                >
+                                    <span style="font-size: 10pt"
+                                        >(940) 369-5259<span><br /></span
+                                    ></span>
+                                    <span style="font-size: 10pt"
+                                        >(940) 565-3175<span><br /></span
+                                    ></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    colspan="3"
+                                    style="
+                                        padding-top: 10px;
+                                        padding-bottom: 0;
+                                        padding-left: 0;
+                                        padding-right: 0;
+                                        line-height: 18px;
+                                        vertical-align: top;
+                                    "
+                                >
+                                    <span style="font-size: 10pt"
+                                        >Please visit us at
+                                        <a href="https://guides.library.unt.edu/spark"
+                                            >https://guides.library.unt.edu/spark</a
+                                        >
+                                        for our hours.</span
+                                    >
+                                </td>
+                            </tr>
+                            <tr>
+                                <td width="33%" style="padding-top: 20px">
+                                    <span> <a href="https://untmakerspace.podbean.com">PodBean</a></span>
+                                </td>
+                                <td width="33%" style="padding-top: 20px; text-align: center">
+                                    <span>Apple Podcasts</span>
+                                </td>
+                                <td width="33%" style="padding-top: 20px; text-align: end">
+                                    <span><a href="https://blogs.library.unt.edu/spark/ ">Check out our blog!</a></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

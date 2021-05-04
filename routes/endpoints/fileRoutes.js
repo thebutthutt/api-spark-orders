@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const submissions = mongoose.model("PrintRequest");
+const submissions = mongoose.model("Submission");
 const auth = require("../auth");
 
 router.get("/:fileID", auth.required, function (req, res) {

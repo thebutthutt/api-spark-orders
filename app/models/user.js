@@ -24,9 +24,8 @@ userSchema.methods.generateJWT = function () {
     return jwt.sign(
         {
             name: this.name,
-            email: this.email,
             euid: this.local.euid,
-            isSuperAdmin: this.isSuperAdmin,
+            isAdmin: this.isSuperAdmin,
             id: this._id,
             exp: parseInt(expirationDate.getTime() / 1000, 10),
         },

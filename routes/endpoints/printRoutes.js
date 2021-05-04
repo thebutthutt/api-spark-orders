@@ -1,18 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const submissions = mongoose.model("PrintRequest");
+const submissions = mongoose.model("Submission");
 const auth = require("../auth");
 
 router.get("/", auth.required, function (req, res) {
     submissions.find({}, function (err, results) {
-        console.log(results);
         res.json({ submissions: results });
     });
 });
 
 router.get("/new", auth.required, function (req, res) {
     //load the submission page and flash any messages
+    console.log("getting");
     submissions.aggregate(
         [
             {
@@ -22,7 +22,7 @@ router.get("/new", auth.required, function (req, res) {
                             input: "$files",
                             as: "item",
                             cond: {
-                                $eq: ["$$item.isNewSubmission", true],
+                                $eq: ["$$item.status", "UNREVIEWED"],
                             },
                         },
                     },
@@ -31,6 +31,7 @@ router.get("/new", auth.required, function (req, res) {
             { $match: { "files.0": { $exists: true } } },
         ],
         function (err, data) {
+            console.log("files", data);
             res.json({ submissions: data });
         }
     );
@@ -567,13 +568,7 @@ router.get("/all", auth.required, function (req, res) {
 
     submissions.find({}, function (err, data) {
         //loading every single top level request FOR NOW
-        res.render("pages/allPrints", {
-            pgnum: 4, //tells the navbar what page to highlight
-            dbdata: data,
-            printPage: "all",
-            isAdmin: true,
-            isSuperAdmin: req.user.isSuperAdmin,
-        });
+        res.json({ submissions: data });
     });
 });
 

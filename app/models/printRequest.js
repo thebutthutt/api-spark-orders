@@ -1,198 +1,146 @@
 var mongoose = require("mongoose");
 require("./patron.js");
-
-var singlePrintSchema = mongoose.Schema({
+var singleFileSchema = mongoose.Schema({
     fileName: { type: String, default: "" },
-    realFileName: { type: String, default: "" },
-    material: { type: String, default: "" },
-    infill: { type: String, default: "" },
-    color: { type: String, default: "" },
-    copies: { type: String, default: "" },
-    notes: { type: String, default: "" },
-    printLocation: { type: String, default: "" },
-    pickupLocation: { type: String, default: "" },
+    originalFileName: { type: String, default: "" },
 
-    calculatedVolumeCm: { type: Number, default: 0 },
+    status: {
+        type: String,
+        enum: [
+            "UNREVIEWED",
+            "REVIEWED",
+            "PENDING_PAYMENT",
+            "READY_TO_PRINT",
+            "PRINTING",
+            "IN_TRANSIT",
+            "WAITING_FOR_PICKUP",
+            "PICKED_UP",
+            "REJECTED",
+            "STALE_ON_PAYMENT",
+            "STALE_ON_PICKUP",
+            "REPOSESSED",
+            "LOST_IN_TRANSIT",
+        ],
+        default: "UNREVIEWED",
+    },
 
-    isNewSubmission: { type: Boolean, default: true },
-    isReviewed: { type: Boolean, default: false },
-    isRejected: { type: Boolean, default: false },
-    isPendingPayment: { type: Boolean, default: false },
-    isPendingWaive: { type: Boolean, default: false },
-    isPaid: { type: Boolean, default: false },
-    isReadyToPrint: { type: Boolean, default: false },
-    isPrinted: { type: Boolean, default: false },
-    isInTransit: { type: Boolean, default: false },
-    isPickedUp: { type: Boolean, default: false },
-    isPendingDelete: { type: Boolean, default: false },
-    canBeReviewed: { type: Boolean, default: true },
-    isStaleOnPickup: { type: Boolean, default: false },
-    isStaleOnPayment: { type: Boolean, default: false },
-    isSigned: { type: Boolean, default: false },
+    request: {
+        timestampSubmitted: { type: Date, default: "1970" },
+        material: { type: String, default: "Any Material" },
+        infill: { type: String, default: "12.5%" },
+        color: { type: String, default: "Any Color" },
+        notes: { type: String, default: "" },
+        pickupLocation: {
+            type: String,
+            enum: ["Willis Library", "Discovery Park"],
+            default: "Willis Library",
+            required: true,
+        },
+    },
 
-    signaturePath: { type: String, default: "" },
-
-    dateSubmitted: { type: String, default: "" },
-    dateReviewed: { type: String, default: "" },
-    datePaid: { type: String, default: "" },
-    datePrinted: { type: String, default: "" },
-    datePickedUp: { type: String, default: "" },
-    dateOfFirstWarning: { type: String, default: "" },
-    dateOfSecondWarning: { type: String, default: "" },
-    dateOfConfiscation: { type: String, default: "" },
-
-    timestampSubmitted: { type: Date, default: "1970" },
-    timestampReviewed: { type: Date, default: "1970" },
-    timestampPaid: { type: Date, default: "1970" },
-    timestampPrinted: { type: Date, default: "1970" },
-    timestampPickedUp: { type: Date, default: "1970" },
-    timestampOfFirstWarning: { type: Date, default: "1970" },
-    timestampOfSecondWarning: { type: Date, default: "1970" },
-    timestampOfConfiscation: { type: Date, default: "1970" },
-
-    gcodeName: { type: String, default: "" },
-    realGcodeName: { type: String, default: "" },
-    slicedPrinter: { type: String, default: "" },
-    slicedMaterial: { type: String, default: "" },
-    timeHours: { type: Number, default: 0 },
-    timeMinutes: { type: Number, default: 0 },
-    grams: { type: Number, default: 0 },
-    estimations: {
+    review: {
+        descision: {
+            type: String,
+            enum: ["Accepted", "Rejected"],
+            default: "Accepted",
+            required: true,
+        },
+        reviewedBy: { type: String, default: "" },
+        timestampReviewed: { type: Date, default: "1970" },
+        internalNotes: {
+            type: [
+                {
+                    techName: { type: String, default: "" },
+                    dateAdded: {
+                        type: Date,
+                        default: "1970",
+                        required: true,
+                    },
+                    notes: { type: String, default: "" },
+                },
+            ],
+            default: [],
+            required: true,
+        },
+        patronNotes: { type: String, default: "" },
         slicedHours: { type: Number, default: 0 },
         slicedMinutes: { type: Number, default: 0 },
         slicedGrams: { type: Number, default: 0 },
-        slicedCopies: { type: Number, default: 0 },
-        totalHours: { type: Number, default: 0 },
-        totalMinutes: { type: Number, default: 0 },
-        totalGrams: { type: Number, default: 0 },
-    },
-
-    realGrams: { type: Number, default: 0 }, //actual grams entered after printing is finished
-    completedLocation: { type: String, default: "" },
-
-    printingData: {
-        rollID: { type: String, default: "" },
-        rollWeight: { type: Number, default: 0 },
-        finalWeight: { type: Number, default: 0 },
-        weightChange: { type: Number, default: 0 },
-        copiesPrinting: { type: Number, default: 0 },
-        copiesPrinted: { type: Number, default: 0 },
-        location: { type: String, default: "" },
-        printer: { type: String, default: "" },
-        numAttempts: { type: Number, default: 0 },
-        numFailedAttempts: { type: Number, default: 0 },
-    },
-
-    attempts: {
-        type: [
-            {
-                timestampStarted: { type: Date, default: "1970" },
-                timestampEnded: { type: Date, default: "1970" },
-                copies: { type: Number, default: 0 },
-                location: { type: String, default: "" },
-                printer: { type: String, default: "" },
-                isFinished: { type: Boolean, default: false },
-                isSuccess: { type: Boolean, default: false },
-            },
-        ],
-        default: [],
-    },
-
-    filaments: {
-        type: [
-            {
-                rollID: { type: String, default: "" },
-                startWeight: { type: Number, default: 0 },
-                endWeight: { type: Number, default: 0 },
-            },
-        ],
-        default: [],
-    },
-
-    copiesData: {
-        unprinted: { type: Number, default: 0 },
-        printing: { type: Number, default: 0 },
-        inTransit: { type: Number, default: 0 },
-        completed: { type: Number, default: 0 },
-        pickedUp: { type: Number, default: 0 },
-    },
-
-    completedCopies: {
-        type: [
-            {
-                isInTransit: { type: Boolean, default: false },
-                pickupLocation: { type: String, default: "" },
-                printedBy: { type: String, default: "" },
-                timestampPrinted: { type: Date, default: "1970" },
-                timestampArrived: { type: Date, default: "1970" },
-                timestampPickedUp: { type: Date, default: "1970" },
-                timestampOfFirstWarning: { type: Date, default: "1970" },
-                timestampOfSecondWarning: { type: Date, default: "1970" },
-                timestampOfConfiscation: { type: Date, default: "1970" },
-            },
-        ],
-        default: [],
-    },
-    isStarted: { type: Boolean, default: false },
-
-    techNotes: { type: String, default: "" },
-    newTechNotes: [
-        {
-            techName: { type: String, default: "" },
-            dateAdded: Date,
-            notes: { type: String, default: "" },
+        gcodeName: { type: String, default: "" },
+        originalGcodeName: { type: String, default: "" },
+        slicedPrinter: { type: String, default: "" },
+        slicedMaterial: { type: String, default: "" },
+        printLocation: {
+            type: String,
+            enum: ["Willis Library", "Discovery Park"],
+            default: "Willis Library",
+            required: true,
         },
-    ],
-    patronNotes: { type: String, default: "" },
+        calculatedVolumeCm: { type: Number, default: 0 },
+    },
 
-    approvedBy: { type: String, default: "" },
-    startedBy: { type: String, default: "" },
+    payment: {
+        isPendingWaive: { type: Boolean, default: false },
+        timestampPaymentRequested: {
+            type: Date,
+            default: "1970",
+            required: true,
+        },
+        timestampPaid: { type: Date, default: "1970" },
+        paymentType: {
+            type: String,
+            enum: ["PAID", "WAIVED", "UNPAID"],
+            default: "UNPAID",
+            required: true,
+        },
+        waivedBy: { type: String, default: "" },
+        price: { type: Number, default: 0 },
+    },
 
-    overrideNotes: { type: String, default: "" },
+    printing: {
+        printingLocation: {
+            type: String,
+            enum: ["Willis Library", "Discovery Park"],
+            default: "Willis Library",
+            required: true,
+        },
+        attemptIDs: {
+            type: [{ type: mongoose.Schema.ObjectId, default: null }],
+            default: [],
+            required: true,
+        },
+        timestampPrinted: { type: Date, default: "1970" },
+    },
 
-    singleCopyPrice: { type: Number, default: 0 },
-    allCopiesPrice: { type: Number, default: 0 },
+    pickup: {
+        timestampArrivedAtPickup: { type: Date, default: "1970" },
+        timestampFirstWarning: { type: Date, default: "1970" },
+        timestampSecondWarning: { type: Date, default: "1970" },
+        timestampReposessed: { type: Date, default: "1970" },
+        timestampPickedUp: { type: Date, default: "1970" },
+    },
+
+    isPendingDelete: { type: Boolean, default: false },
 });
-
 // define the schema for a single patron submission
 var printSubmissionSchema = mongoose.Schema({
-    patron: mongoose.model("Patron").schema,
-
+    patron: { type: mongoose.model("Patron").schema },
     isForClass: { type: Boolean, default: false },
-    classDetails: {
-        classCode: { type: String, default: "" },
-        professor: { type: String, default: "" },
-        projectType: { type: String, default: "" },
-    },
-
+    classCode: { type: String, default: "" },
+    professor: { type: String, default: "" },
+    projectType: { type: String, default: "" },
     isForDepartment: { type: Boolean, default: false },
-    internalDetails: {
-        department: { type: String, default: "" },
-        project: { type: String, default: "" },
-    },
-
-    dateSubmitted: { type: String, default: "" },
-    timestampSubmitted: {
-        type: Date,
-        default: "1970",
-    },
-    datePaymentRequested: { type: String, default: "" },
-    timestampPaymentRequested: {
-        type: Date,
-        default: "1970",
-    },
-    datePaid: { type: String, default: "" },
-    timestampPaid: {
-        type: Date,
-        default: "1970",
-    },
-
+    department: { type: String, default: "" },
+    departmentProject: { type: String, default: "" },
+    timestampSubmitted: { type: Date, default: "1970" },
+    timestampPaymentRequested: { type: Date, default: "1970" },
+    timestampPaid: { type: Date, default: "1970" },
     requestedPrice: { type: Number, default: 0 },
-    requestedSingleCopyPrice: { type: Number, default: 0 },
     numFiles: { type: Number, default: 0 },
     allFilesReviewed: { type: Boolean, default: false },
+    allFilesPrinted: { type: Boolean, default: false },
+    allFilesPickedUp: { type: Boolean, default: false },
     isPendingWaive: { type: Boolean, default: false },
-    files: [singlePrintSchema], //array of actual print files
+    files: [singleFileSchema],
 });
-
-module.exports = mongoose.model("PrintRequest", printSubmissionSchema);
+module.exports = mongoose.model("Submission", printSubmissionSchema);

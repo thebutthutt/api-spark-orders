@@ -13,10 +13,9 @@ router.get("/stl/:fileID", auth.optional, function (req, res) {
 });
 
 router.get("/gcode/:fileID", auth.optional, function (req, res) {
-    console.log(req.params.fileID);
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
         var thisFile = submission.files.id(req.params.fileID);
-        console.log(thisFile);
+
         if (thisFile.review.hasOwnProperty("gcodeName")) {
             res.sendFile(path.join(__dirname, "..", "..", "..", "Uploads", "Gcode", thisFile.review.gcodeName));
         } else {

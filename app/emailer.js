@@ -29,34 +29,53 @@ const email = new Email({
             extension: "ejs", // <---- HERE
         },
     },
-    // <https://github.com/Automattic/juice>
     juice: true,
-    // Override juice global settings <https://github.com/Automattic/juice#juicecodeblocks>
     juiceSettings: {
         tableElements: ["TABLE"],
     },
     juiceResources: {
         preserveImportant: true,
         webResources: {
-            //
-            // this is the relative directory to your CSS/image assets
-            // and its default path is `build/`:
-            //
-            // e.g. if you have the following in the `<head`> of your template:
-            // `<link rel="stylesheet" href="style.css" data-inline="data-inline">`
-            // then this assumes that the file `build/style.css` exists
-            //
             relativeTo: path.join(__dirname, "emails", "assets"),
-            //
-            // but you might want to change it to something like:
-            // relativeTo: path.join(__dirname, '..', 'assets')
-            // (so that you can re-use CSS/images that are used in your web-app)
-            //
         },
     },
 });
 
 module.exports = {
+    requestPayment: function (submission, acceptedFiles, rejectedFiles, amount, url) {
+        var recipient = submission.patron.email;
+
+        if (acceptedFiles.length < 1) {
+            email
+                .send({
+                    template: path.join(__dirname, "emails", "allRejected"),
+                    message: {
+                        to: recipient,
+                    },
+                    locals: {
+                        submission: submission,
+                        allFiles: rejectedFiles,
+                    },
+                })
+                .catch(console.error);
+        } else {
+            email
+                .send({
+                    template: path.join(__dirname, "emails", "requestPayment"),
+                    message: {
+                        to: recipient,
+                    },
+                    locals: {
+                        submission: submission,
+                        acceptedFiles: acceptedFiles,
+                        rejectedFiles: rejectedFiles,
+                        amount: amount,
+                        url: url,
+                    },
+                })
+                .catch(console.error);
+        }
+    },
     newSubmission: function (submission) {
         var recipient = submission.patron.email;
         var files = submission.files;

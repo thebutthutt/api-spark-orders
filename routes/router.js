@@ -1,12 +1,10 @@
 var express = require("express");
 var router = express.Router();
 
-const auth = require("./auth");
-
 router.use("/users", require("./endpoints/userRoutes.js"));
-router.use("/prints", require("./endpoints/printRoutes.js"));
-router.use("/submit", require("./endpoints/submissionRoutes.js"));
-router.use("/files", require("./endpoints/fileRoutes"));
-router.use("/download", require("./endpoints/downloadRoutes"));
+router.use("/submissions", require("./endpoints/submissionManagement.js"));
+router.use("/submissions", require("./endpoints/getSubmissions"));
+router.use("/submit", require("./endpoints/submitRequest"));
+router.use("/download", require("./endpoints/downloadFiles"));
 
 module.exports = router;

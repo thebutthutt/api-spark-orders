@@ -1,17 +1,59 @@
-/** @format */
-
 const base_url = "https://payments.library.unt.edu/payment/";
 const account = process.env.PAYMENT_ACCOUNT;
-var fs = require("fs");
-var path = require("path");
-//var emailer = require("./email.js");
 var crypto = require("crypto");
-//var emailer = require("./email.js");
 var newmailer = require("./emailer.js");
 
 const secret_key = process.env.PAYMENT_KEY;
 
+function generateURL(amount, name, submissionID) {
+    var concatString = "";
+    var newURL = new URL(base_url);
+    concatString = concatString.concat(account, amount, name, submissionID, secret_key);
+
+    var otherHash = crypto.createHash("md5").update(concatString).digest("hex");
+
+    newURL.searchParams.append("account", account);
+    newURL.searchParams.append("amount", amount);
+    newURL.searchParams.append("contact_name", name);
+    newURL.searchParams.append("submissionID", submissionID);
+    newURL.searchParams.append("libhash", otherHash);
+
+    return newURL;
+}
+
 module.exports = {
+    completeReview: function (submission) {
+        let finalPaymentAmount = 0.0;
+        let acceptedFiles = [];
+        let rejectedFiles = [];
+
+        for (var file of submission.files) {
+            if (file.review.descision == "Accepted") {
+                finalPaymentAmount += Math.max(file.review.slicedHours + file.review.slicedMinutes / 60, 1);
+                acceptedFiles.push({
+                    filename: file.originalName,
+                    notes: file.review.patronNotes,
+                });
+            } else {
+                rejectedFiles.push({
+                    filename: file.originalName,
+                    notes: file.review.patronNotes,
+                });
+            }
+        }
+
+        finalPaymentAmount = finalPaymentAmount.toFixed(2);
+        let paymentURL = { href: "" };
+
+        if (finalPaymentAmount >= 1) {
+            var nameString = "";
+            nameString = nameString.concat(submission.patron.fname, " ", submission.patron.lname);
+            paymentURL = generateURL(finalPaymentAmount, nameString, submission._id);
+        }
+
+        newmailer.requestPayment(submission, acceptedFiles, rejectedFiles, finalPaymentAmount, paymentURL.href);
+    },
+
     //generate a URL for the patron to pay thrpugh
     generatePaymentURL: function (
         contact_name,

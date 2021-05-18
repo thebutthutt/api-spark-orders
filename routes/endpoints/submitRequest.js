@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-var multer = require("multer");
+const multer = require("multer");
 const submissions = mongoose.model("Submission");
 const path = require("path");
 

@@ -5,6 +5,7 @@ var selfServicePrinterSchema = mongoose.Schema({
     printerBarcode: { type: String, default: "" },
     isCheckedOut: { type: Boolean, default: false },
     currentSelfServiceLog: { type: String, default: "" },
+    runningJobID: { type: mongoose.Schema.ObjectId, default: null },
 });
 
 module.exports = mongoose.model("SelfServicePrinter", selfServicePrinterSchema);

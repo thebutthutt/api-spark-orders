@@ -114,8 +114,6 @@ var singleFileSchema = mongoose.Schema({
 
     pickup: {
         timestampArrivedAtPickup: { type: Date, default: "1970" },
-        timestampFirstWarning: { type: Date, default: "1970" },
-        timestampSecondWarning: { type: Date, default: "1970" },
         timestampReposessed: { type: Date, default: "1970" },
         timestampPickedUp: { type: Date, default: "1970" },
     },
@@ -135,6 +133,7 @@ var printSubmissionSchema = mongoose.Schema({
     timestampSubmitted: { type: Date, default: "1970" },
     timestampPaymentRequested: { type: Date, default: "1970" },
     timestampPaid: { type: Date, default: "1970" },
+    timestampPickupRequested: { type: Date, default: "1970" },
     requestedPrice: { type: Number, default: 0 },
     numFiles: { type: Number, default: 0 },
     allFilesReviewed: { type: Boolean, default: false },

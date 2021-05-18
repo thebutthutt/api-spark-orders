@@ -1,584 +1,133 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
+const path = require("path");
 const submissions = mongoose.model("Submission");
 const auth = require("../auth");
+var gcodePath = path.join(__dirname, "..", "..", "Uploads", "Gcode");
+var stlPath = path.join(__dirname, "..", "..", "Uploads", "STLs");
 
-router.get("/", auth.required, function (req, res) {
-    submissions.find({}, function (err, results) {
-        res.json({ submissions: results });
+/**
+ *  req:
+ *  status: "UNREVIEWED",
+            "REVIEWED",
+            "PENDING_PAYMENT",
+            "READY_TO_PRINT",
+            "PRINTING",
+            "IN_TRANSIT",
+            "WAITING_FOR_PICKUP",
+            "PICKED_UP",
+            "REJECTED",
+            "STALE_ON_PAYMENT",
+            "STALE_ON_PICKUP",
+            "REPOSESSED",
+            "LOST_IN_TRANSIT",
+    pickupLocation:
+            "Willis Library",
+            "Discovery Park",
+            "Both"
+    printingLocation:
+            "Willis Library",
+            "Discovery Park",
+            "Both"
+ */
+router.post("/", auth.required, async function (req, res) {
+    var antiPrint = "Both";
+    var antiPickup = "Both";
+    var statuses = [];
+
+    if (req.body.status == "UNREVIEWED" || req.body.status == "REVIEWED") {
+        statuses = ["UNREVIEWED", "REVIEWED"];
+    } else {
+        statuses.push(req.body.status);
+    }
+
+    if (req.body.printingLocation == "Willis Library") {
+        antiPrint = "Discovery Park";
+    } else if (req.body.printingLocation == "Discovery Park") {
+        antiPrint = "Willis Library";
+    }
+
+    if (req.body.pickupLocation == "Willis Library") {
+        antiPickup = "Discovery Park";
+    } else if (req.body.pickupLocation == "Discovery Park") {
+        antiPickup = "Willis Library";
+    }
+
+    var results = await submissions.aggregate([
+        {
+            $set: {
+                files: {
+                    $filter: {
+                        input: "$files",
+                        as: "item",
+                        cond: {
+                            $and: [
+                                { $in: ["$$item.status", statuses] },
+                                { $ne: ["$$item.printing.printingLocation", antiPrint] },
+                                { $ne: ["$$item.request.pickupLocation", antiPickup] },
+                            ],
+                        },
+                    },
+                },
+            },
+        },
+        { $match: { "files.0": { $exists: true } } },
+    ]);
+    res.json({ submissions: results });
+});
+
+router.post("/delete/file/:fileID", auth.required, async function (req, res) {
+    console.log("here");
+    var fileID = req.params.fileID;
+    var result = await submissions.findOne({
+        "files._id": fileID,
     });
-});
 
-router.get("/new", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    console.log("getting");
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $eq: ["$$item.status", "UNREVIEWED"],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            console.log("files", data);
-            res.json({ submissions: data });
+    var thisFile = result.files.id(fileID);
+
+    //delete stl from disk
+
+    try {
+        var thisSTLPath = path.join(stlPath, thisFile.fileName);
+        fs.unlinkSync(thisSTLPath);
+    } catch (error) {
+        console.error("there was STL error:", thisFile.fileName, error.message);
+    }
+
+    //delete gcode from disk if it exists
+
+    if (thisFile.review.gcodeName) {
+        try {
+            var thisGcodePath = path.join(gcodePath, thisFile.gcodeName);
+            fs.unlinkSync(thisGcodePath);
+        } catch (error) {
+            console.error("there was GCODE error:", thisFile.gcodeName, error.message);
         }
-    );
-});
-router.get("/pendpay", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    {
-                                        $eq: ["$$item.isPendingPayment", true],
-                                    },
-                                    {
-                                        $ne: ["$$item.isStaleOnPayment", true],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
+    }
+
+    thisFile.remove(); //remove the single file from the top level print submission
+    result.numFiles -= 1; //decrement number of files associated with this print request
+
+    if (result.numFiles < 1) {
+        //if no more files in this request delete the request itself
+        await submissions.deleteOne({
+            _id: result._id,
+        });
+    } else {
+        //else save the top level with one less file
+        result.allFilesReviewed = true;
+        for (var thisFile of result.files) {
+            if (!thisFile.isReviewed) {
+                result.allFilesReviewed = false;
+            }
         }
-    );
+
+        await result.save();
+    }
+
+    res.status(200).send("OK");
 });
-
-//show pending payment prints
-router.get("/pendpaystale", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $eq: ["$$item.isStaleOnPayment", true],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-//-------------READY TO PRINT------------------------
-
-//show pready to print all locations
-router.get("/ready", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    {
-                                        $eq: ["$$item.isReadyToPrint", true],
-                                    },
-                                    {
-                                        $eq: ["$$item.isPrinted", false],
-                                    },
-                                    {
-                                        $lt: [
-                                            {
-                                                $add: [
-                                                    {
-                                                        $toInt: "$$item.printingData.copiesPrinting",
-                                                    },
-                                                    {
-                                                        $toInt: "$$item.printingData.copiesPrinted",
-                                                    },
-                                                ],
-                                            },
-                                            { $toInt: "$$item.copies" },
-                                        ],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-//show ready to print at willis
-router.get("/readywillis", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    {
-                                        $eq: ["$$item.isReadyToPrint", true],
-                                    },
-                                    {
-                                        $eq: ["$$item.isPrinted", false],
-                                    },
-                                    {
-                                        $lt: [
-                                            {
-                                                $add: [
-                                                    {
-                                                        $toInt: "$$item.printingData.copiesPrinting",
-                                                    },
-                                                    {
-                                                        $toInt: "$$item.printingData.copiesPrinted",
-                                                    },
-                                                ],
-                                            },
-                                            { $toInt: "$$item.copies" },
-                                        ],
-                                    },
-                                    {
-                                        $eq: ["$$item.printLocation", "Willis Library"],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-//show ready to print at dp
-router.get("/readydp", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    {
-                                        $eq: ["$$item.isReadyToPrint", true],
-                                    },
-                                    {
-                                        $eq: ["$$item.isPrinted", false],
-                                    },
-                                    {
-                                        $lt: [
-                                            {
-                                                $add: [
-                                                    {
-                                                        $toInt: "$$item.printingData.copiesPrinting",
-                                                    },
-                                                    {
-                                                        $toInt: "$$item.printingData.copiesPrinted",
-                                                    },
-                                                ],
-                                            },
-                                            { $toInt: "$$item.copies" },
-                                        ],
-                                    },
-                                    {
-                                        $eq: ["$$item.printLocation", "Discovery Park"],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/printing", auth.required, function (req, res) {
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: { $eq: ["$$item.isStarted", true] },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/printingwillis", auth.required, function (req, res) {
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    {
-                                        $eq: ["$$item.isStarted", true],
-                                    },
-                                    {
-                                        $eq: ["$$item.printingData.location", "Willis Library"],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/printingdp", auth.required, function (req, res) {
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    {
-                                        $eq: ["$$item.isStarted", true],
-                                    },
-                                    {
-                                        $eq: ["$$item.printingData.location", "Discovery Park"],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/intransit", auth.required, function (req, res) {
-    submissions.aggregate(
-        [
-            { $unwind: "$files" },
-            {
-                $set: {
-                    "files.completedCopies": {
-                        $filter: {
-                            input: "$files.completedCopies",
-                            as: "item",
-                            cond: { $eq: ["$$item.isInTransit", true] },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.completedCopies.0": { $exists: true } } },
-            {
-                $group: {
-                    _id: "$_id",
-                    doc: { $first: "$$ROOT" },
-                    files: { $addToSet: "$files" },
-                },
-            },
-            {
-                $replaceRoot: {
-                    newRoot: {
-                        $mergeObjects: ["$doc", { files: "$files" }],
-                    },
-                },
-            },
-            { $sort: { timestampSubmitted: -1 } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/pickup", auth.required, function (req, res) {
-    submissions.aggregate(
-        [
-            { $unwind: "$files" },
-            {
-                $set: {
-                    "files.completedCopies": {
-                        $filter: {
-                            input: "$files.completedCopies",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    { $eq: ["$$item.isInTransit", false] },
-                                    {
-                                        $lt: ["$$item.timestampPickedUp", new Date("1980")],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.completedCopies.0": { $exists: true } } },
-            {
-                $group: {
-                    _id: "$_id",
-                    doc: { $first: "$$ROOT" },
-                    files: { $addToSet: "$files" },
-                },
-            },
-            {
-                $replaceRoot: {
-                    newRoot: {
-                        $mergeObjects: ["$doc", { files: "$files" }],
-                    },
-                },
-            },
-            { $sort: { timestampSubmitted: -1 } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/pickupwillis", auth.required, function (req, res) {
-    submissions.aggregate(
-        [
-            { $unwind: "$files" },
-            {
-                $set: {
-                    "files.completedCopies": {
-                        $filter: {
-                            input: "$files.completedCopies",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    { $eq: ["$$item.isInTransit", false] },
-                                    {
-                                        $lt: ["$$item.timestampPickedUp", new Date("1980")],
-                                    },
-                                    {
-                                        $eq: ["$$item.pickupLocation", "Willis Library"],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.completedCopies.0": { $exists: true } } },
-            {
-                $group: {
-                    _id: "$_id",
-                    doc: { $first: "$$ROOT" },
-                    files: { $addToSet: "$files" },
-                },
-            },
-            {
-                $replaceRoot: {
-                    newRoot: {
-                        $mergeObjects: ["$doc", { files: "$files" }],
-                    },
-                },
-            },
-            { $sort: { timestampSubmitted: -1 } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/pickupdp", auth.required, function (req, res) {
-    submissions.aggregate(
-        [
-            { $unwind: "$files" },
-            {
-                $set: {
-                    "files.completedCopies": {
-                        $filter: {
-                            input: "$files.completedCopies",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    { $eq: ["$$item.isInTransit", false] },
-                                    {
-                                        $lt: ["$$item.timestampPickedUp", new Date("1980")],
-                                    },
-                                    {
-                                        $eq: ["$$item.pickupLocation", "Discovery Park"],
-                                    },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.completedCopies.0": { $exists: true } } },
-            {
-                $group: {
-                    _id: "$_id",
-                    doc: { $first: "$$ROOT" },
-                    files: { $addToSet: "$files" },
-                },
-            },
-            {
-                $replaceRoot: {
-                    newRoot: {
-                        $mergeObjects: ["$doc", { files: "$files" }],
-                    },
-                },
-            },
-            { $sort: { timestampSubmitted: -1 } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-router.get("/completed", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $eq: ["$$item.isPickedUp", true],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-            { $sort: { timestampSubmitted: -1 } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-//-----------------------REJECTED-----------------------
-router.get("/rejected", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-    submissions.aggregate(
-        [
-            {
-                $set: {
-                    files: {
-                        $filter: {
-                            input: "$files",
-                            as: "item",
-                            cond: {
-                                $eq: ["$$item.isRejected", true],
-                            },
-                        },
-                    },
-                },
-            },
-            { $match: { "files.0": { $exists: true } } },
-            { $sort: { timestampSubmitted: -1 } },
-        ],
-        function (err, data) {
-            res.json({ submissions: data });
-        }
-    );
-});
-
-//-----------------------ALL-----------------------
-router.get("/all", auth.required, function (req, res) {
-    //load the submission page and flash any messages
-
-    submissions.find({}, function (err, data) {
-        //loading every single top level request FOR NOW
-        res.json({ submissions: data });
-    });
-});
-
-router.get("/allp", auth.required, async function (req, res) {
-    //load the submission page and flash any messages
-    var page = req.query.page;
-    var skip = (page - 1) * numPerPage;
-    var submissions = await submissions.find({}).skip(skip).limit(numPerPage);
-
-    res.json({ submissions: data });
-});
+router.post("/delete/submission/:submissionID", auth.required, async function (req, res) {});
 
 module.exports = router;

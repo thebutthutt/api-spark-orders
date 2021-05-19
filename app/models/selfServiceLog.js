@@ -2,6 +2,7 @@ var mongoose = require("mongoose");
 
 var selfServiceLogSchema = mongoose.Schema({
     printerName: { type: String, default: "" },
+    printerID: { type: mongoose.Schema.ObjectId, default: null },
     rollID: { type: String, default: "" },
     rollStartWeight: { type: Number, default: 0 },
     rollEndWeight: { type: Number, default: 0 },

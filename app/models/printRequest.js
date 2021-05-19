@@ -3,7 +3,8 @@ require("./patron.js");
 var singleFileSchema = mongoose.Schema({
     fileName: { type: String, default: "" },
     originalFileName: { type: String, default: "" },
-
+    stlID: { type: mongoose.Schema.ObjectId, default: null },
+    gcodeID: { type: mongoose.Schema.ObjectId, default: null },
     status: {
         type: String,
         enum: [
@@ -46,7 +47,7 @@ var singleFileSchema = mongoose.Schema({
             required: true,
         },
         reviewedBy: { type: String, default: "" },
-        timestampReviewed: { type: Date, default: "1970" },
+        timestampReviewed: { type: Date, default: "1970" }, //timestamp of last review NOT when payment was requested
         internalNotes: {
             type: [
                 {
@@ -67,7 +68,6 @@ var singleFileSchema = mongoose.Schema({
         slicedMinutes: { type: Number, default: 0 },
         slicedGrams: { type: Number, default: 0 },
         gcodeName: { type: String, default: "" },
-        originalGcodeName: { type: String, default: "" },
         slicedPrinter: { type: String, default: "" },
         slicedMaterial: { type: String, default: "" },
         printLocation: {

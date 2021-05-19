@@ -3,12 +3,20 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
 const auth = require("../auth");
-const path = require("path");
+const gfs = require("../../storage/downloader");
 
-router.get("/stl/:fileID", auth.optional, function (req, res) {
+router.get("/stl/:fileID", auth.optional, async function (req, res) {
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
         var thisFile = submission.files.id(req.params.fileID);
-        res.sendFile(path.join(__dirname, "..", "..", "..", "Uploads", "STLs", thisFile.fileName));
+        console.log(thisFile.stlID);
+        gfs.find({ _id: thisFile.stlID }).toArray((err, files) => {
+            if (!files || files.length === 0) {
+                return res.status(404).json({
+                    err: "no files exist",
+                });
+            }
+            gfs.openDownloadStream(thisFile.stlID).pipe(res);
+        });
     });
 });
 
@@ -16,11 +24,14 @@ router.get("/gcode/:fileID", auth.optional, function (req, res) {
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
         var thisFile = submission.files.id(req.params.fileID);
 
-        if (thisFile.review.hasOwnProperty("gcodeName")) {
-            res.sendFile(path.join(__dirname, "..", "..", "..", "Uploads", "Gcode", thisFile.review.gcodeName));
-        } else {
-            res.status(400).send("File not found");
-        }
+        gfs.find({ _id: thisFile.gcodeID }).toArray((err, files) => {
+            if (!files || files.length === 0) {
+                return res.status(404).json({
+                    err: "no files exist",
+                });
+            }
+            gfs.openDownloadStream(thisFile.gcodeID).pipe(res);
+        });
     });
 });
 

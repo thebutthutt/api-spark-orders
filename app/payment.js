@@ -26,22 +26,28 @@ module.exports = {
         let finalPaymentAmount = 0.0;
         let acceptedFiles = [];
         let rejectedFiles = [];
+        console.log(finalPaymentAmount);
 
         for (var file of submission.files) {
             if (file.review.descision == "Accepted") {
-                finalPaymentAmount += Math.max(file.review.slicedHours + file.review.slicedMinutes / 60, 1);
+                let thisPrice = Math.max(file.review.slicedHours + file.review.slicedMinutes / 60, 1);
+                console.log(thisPrice);
+                finalPaymentAmount += thisPrice;
+                console.log(file);
                 acceptedFiles.push({
-                    filename: file.originalName,
+                    filename: file.fileName,
                     notes: file.review.patronNotes,
+                    price: thisPrice.toFixed(2),
                 });
+                console.log(acceptedFiles);
             } else {
                 rejectedFiles.push({
-                    filename: file.originalName,
+                    filename: file.fileName,
                     notes: file.review.patronNotes,
                 });
             }
         }
-
+        console.log(finalPaymentAmount);
         finalPaymentAmount = finalPaymentAmount.toFixed(2);
         let paymentURL = { href: "" };
 

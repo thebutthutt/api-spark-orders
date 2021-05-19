@@ -1,6 +1,90 @@
-<%=submission%> <br />
-<%=acceptedFiles%> <br />
-<%=rejectedFiles%> <br />
-<%=rejectedFiles%> <br />
-<%=amount%> <br />
-<%=url%> <br />
+<head>
+    <link rel="stylesheet" href="template.css" />
+</head>
+<body>
+    <main>
+        <h3>
+            <%=acceptedFiles.length%> of your <%=acceptedFiles.length + rejectedFiles.length%> requested files have been
+            approved for printing!
+        </h3>
+        <p>Please review the notes below for more information about your reqest.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Decision</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                <%for (var file of acceptedFiles) {%>
+                <tr>
+                    <td>
+                        <p class="accepted"><%=file.filename%></p>
+                        <p class="notes"><%=file.notes%></p>
+                    </td>
+                    <td class="accepted">Accepted</td>
+                    <td>$<%=file.price%></td>
+                </tr>
+                <%}%> <%for (var file of rejectedFiles) {%>
+                <tr>
+                    <td>
+                        <p class="rejected"><%=file.filename%></p>
+                        <p class="notes"><%=file.notes%></p>
+                    </td>
+                    <td class="rejected">Rejected</td>
+                    <td></td>
+                </tr>
+                <%}%>
+
+                <tr>
+                    <td colspan="3">Total Price: $<%=amount%></td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Please use this link to pay for your accepted files:</p>
+        <p><a href="<%=url%>"><%=url%></a></p>
+        <p>
+            If you no longer want these files printed, please email
+            <a href="mailto:thespark@unt.edu">thespark@unt.edu</a>
+        </p>
+    </main>
+    <div style="width: 100%; height: 1px; background-color: #ddd; margin-top: 2rem; margin-bottom: 2rem"></div>
+    <footer>
+        <article>
+            <table>
+                <thead>
+                    <tr>
+                        <td colspan="2" class="tagline">The Spark Makerspace</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="subtitle">University of North Texas Libraries</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="label">Email</span></td>
+                        <td><a href="mailto:thespark@unt.edu">thespark@unt.edu</a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="label">Willis Library</span> - Room 135</td>
+                        <td>(940) 369-5259</td>
+                    </tr>
+                    <tr>
+                        <td><span class="label">Discovery Park</span> - Room M130</td>
+                        <td>(940) 565-3175</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">
+                            Please visit
+                            <a href="http://guides.library.unt.edu/spark">guides.library.unt.edu/spark</a> for our hours
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </article>
+    </footer>
+</body>

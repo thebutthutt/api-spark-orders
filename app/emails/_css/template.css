@@ -1,0 +1,132 @@
+body {
+    word-wrap: break-word;
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+main,
+footer {
+    background-color: #ffffff;
+    border-radius: 0.25rem;
+}
+
+main {
+    margin-bottom: 2rem;
+    padding: 2rem;
+}
+
+main table {
+    font-family: Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+main table thead {
+    border-left: 1px solid #888888;
+    border-right: 1px solid #888888;
+}
+
+main table tbody tr:not(:last-child) {
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+}
+
+main table td,
+main table th {
+    padding: 0.75rem;
+}
+
+main table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+main table tbody tr:not(:last-child) td:first-child p {
+    margin: 0;
+}
+
+main table tbody tr:not(:last-child) td:first-child p:first-child {
+    margin-bottom: 0.5rem;
+}
+
+.accepted,
+.rejected {
+    font-weight: bold;
+}
+
+.accepted {
+    color: #00aa00;
+}
+
+.rejected {
+    color: #dd0000;
+}
+
+.notes {
+    font-size: 0.8rem;
+    color: #555;
+    font-style: italic;
+}
+
+main table tbody tr:not(:last-child) td:last-child,
+main table thead tr th:last-child {
+    text-align: right;
+}
+
+main table tbody tr:last-child td {
+    background-color: #888888;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    border-left: 1px solid #888888;
+    border-right: 1px solid #888888;
+}
+
+main table th {
+    text-align: left;
+    background-color: #888888;
+    color: white;
+}
+
+footer {
+    padding: 0.5rem 2rem;
+}
+
+footer article {
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.subtitle {
+    font-size: 0.8rem;
+    color: #555;
+    margin-top: 0px;
+    text-align: center;
+}
+
+.label {
+    font-weight: bold;
+}
+
+.tagline {
+    margin-bottom: 0px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    text-align: center;
+    color: #00853e;
+}
+
+footer table tbody tr td:last-child {
+    text-align: end;
+}
+
+footer table * {
+    padding: 0px;
+}
+
+footer table thead tr:last-child td {
+    padding-bottom: 1rem;
+}
+
+footer table tfoot tr td {
+    padding-top: 1rem;
+}

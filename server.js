@@ -3,38 +3,44 @@
 
 require("dotenv").config();
 
+// get all the tools we need
+const express = require("express");
+const https = require("https");
+const http = require("http");
+const fs = require("fs");
+const app = express();
+const cors = require("cors");
+const mongoose = require("mongoose");
+const Grid = require("gridfs-stream");
+
+require("./app/models/user.js");
+require("./app/models/printRequest.js");
+require("./app/models/printer.js");
+require("./app/models/selfServiceLog");
+require("./app/models/attempt");
+
+const path = require("path");
+const favicon = require("serve-favicon");
+
+let server;
+
 process.once("SIGUSR2", function () {
-    gracefulShutdown(function () {
+    console.log("closing");
+    server.close(() => {
+        console.log("server closed");
         process.kill(process.pid, "SIGUSR2");
     });
 });
 
-// get all the tools we need
-var express = require("express");
-var https = require("https");
-var http = require("http");
-var fs = require("fs");
-var app = express();
-var port = process.env.PORT;
-const cors = require("cors");
-var mongoose = require("mongoose");
-
-require("./app/models/user.js");
-require("./app/models/printRequest.js");
-
-var path = require("path");
-var favicon = require("serve-favicon");
-
-console.log(process.pid);
-
 // configuration ===============================================================
 mongoose
-    .connect(process.env.MONGO, {
+    .connect(process.env.MONGOURI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         useFindAndModify: false,
     })
-    .then(() => {
+    .then((client) => {
+        var gfs = Grid(client.connection.db, mongoose.mongo);
         var passport = require("passport");
         require("./app/passport")(passport); // pass passport for configuration
 
@@ -49,7 +55,7 @@ mongoose
             res.send("hello world");
         });
 
-        var server = https
+        server = https
             .createServer(
                 {
                     key: fs.readFileSync("./config/npserver2048.key"),
@@ -88,13 +94,5 @@ mongoose
             res.end();
         }).listen(process.env.HTTP, "0.0.0.0");
     }); // connect to our database
-
-function gracefulShutdown(callback) {
-    console.log("closing");
-    server.close(() => {
-        console.log("server closed");
-        callback();
-    });
-}
 
 //emailer.newSubmission();

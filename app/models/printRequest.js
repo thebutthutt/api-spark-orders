@@ -52,6 +52,7 @@ var singleFileSchema = mongoose.Schema({
             type: [
                 {
                     techName: { type: String, default: "" },
+                    techEUID: { type: String, default: "" },
                     dateAdded: {
                         type: Date,
                         default: "1970",

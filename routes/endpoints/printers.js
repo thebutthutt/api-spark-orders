@@ -18,6 +18,12 @@ router.post("/new", auth.required, async function (req, res) {
     res.status(200).send("OK");
 });
 
-router.post("/update/:printerID", auth.required, async function (req, res) {});
+router.post("/update/:printerID", auth.required, async function (req, res) {
+    let printer = await printers.findById(req.params.printerID);
+    printer = Object.assign(printer, req.body);
+    await printer.save();
+
+    res.status(200).send("OK");
+});
 
 module.exports = router;

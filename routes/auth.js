@@ -9,6 +9,9 @@ const getTokenFromHeaders = (req) => {
     const {
         headers: { authorization },
     } = req;
+    if (authorization.slice(0, 7) == "Bearer ") {
+        authorization = authorization.slice(7);
+    }
     if (authorization) {
         return authorization;
     }

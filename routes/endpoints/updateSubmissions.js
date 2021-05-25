@@ -20,6 +20,7 @@ router.post("/review/:fileID", uploader.any(), auth.required, async function (re
 
     let newNote = jsonData.newInternalNote;
     newNote.techName = req.user.name;
+    newNote.techEUID = req.user.euid;
 
     result.allFilesReviewed = true;
     for (var file of result.files) {
@@ -39,6 +40,28 @@ router.post("/review/:fileID", uploader.any(), auth.required, async function (re
 
     await result.save();
 
+    res.status(200).send("OK");
+});
+
+/* -------------------------------------------------------------------------- */
+/*                              Add Internal Note                             */
+/* -------------------------------------------------------------------------- */
+router.post("/addnote/:fileID", auth.required, async function (req, res) {
+    var fileID = req.params.fileID;
+
+    var result = await submissions.findOne({ "files._id": fileID });
+    var selectedFile = result.files.id(fileID);
+    if (req.body.note.length > 0) {
+        let newNote = {
+            techName: req.user.name,
+            techEUID: req.user.euid,
+            notes: req.body.note,
+            dateAdded: new Date(),
+        };
+
+        selectedFile.review.internalNotes.push(newNote);
+    }
+    await result.save();
     res.status(200).send("OK");
 });
 

@@ -8,6 +8,40 @@ const paymentHandler = require("../../app/payment");
 const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
 
+// let allSubmissions = submissions.find({}, function (err, res) {
+//     for (var submission of res) {
+//         let finalPaymentAmount = 0.0;
+//         let acceptedFiles = [];
+//         let rejectedFiles = [];
+
+//         for (var file of submission.files) {
+//             if (file.review.descision == "Accepted") {
+//                 let thisPrice = Math.max(file.review.slicedHours + file.review.slicedMinutes / 60, 1);
+//                 finalPaymentAmount += thisPrice;
+//                 acceptedFiles.push({
+//                     filename: file.fileName,
+//                     notes: file.review.patronNotes,
+//                     price: thisPrice.toFixed(2),
+//                 });
+//             } else {
+//                 rejectedFiles.push({
+//                     filename: file.fileName,
+//                     notes: file.review.patronNotes,
+//                 });
+//             }
+
+//             if (file.review.internalNotes.length > 0) {
+//                 file.review.reviewedByName = file.review.internalNotes[0].techName;
+//                 file.review.reviewedByEUID = file.review.internalNotes[0].techEUID;
+//             }
+//         }
+//         finalPaymentAmount = finalPaymentAmount.toFixed(2);
+//         submission.requestedPrice = finalPaymentAmount;
+
+//         submission.save();
+//     }
+// });
+
 /* -------------------------------------------------------------------------- */
 /*                               Review One File                              */
 /* -------------------------------------------------------------------------- */
@@ -26,11 +60,12 @@ router.post("/review/:fileID", uploader.any(), auth.required, async function (re
     for (var file of result.files) {
         if (file.stlID.toString() == selectedFile.stlID.toString()) {
             file.status = "REVIEWED";
-            file.gcodeID = req.files[0].id;
+            file.gcodeID = jsonData.review.descision == "Accepted" ? req.files[0].id : null;
             file.review = Object.assign(file.review, jsonData.review);
-            file.review.reviewedBy = req.user.name;
+            file.review.reviewedByName = req.user.name;
+            file.review.reviewedByEUID = req.user.name;
             file.review.internalNotes.push(newNote);
-            file.review.gcodeName = req.files[0].filename;
+            file.review.gcodeName = jsonData.review.descision == "Accepted" ? req.files[0].filename : "";
         } else {
             if (file.status == "UNREVIEWED") {
                 result.allFilesReviewed = false;
@@ -51,6 +86,7 @@ router.post("/addnote/:fileID", auth.required, async function (req, res) {
 
     var result = await submissions.findOne({ "files._id": fileID });
     var selectedFile = result.files.id(fileID);
+
     if (req.body.note.length > 0) {
         let newNote = {
             techName: req.user.name,
@@ -59,7 +95,11 @@ router.post("/addnote/:fileID", auth.required, async function (req, res) {
             dateAdded: new Date(),
         };
 
-        selectedFile.review.internalNotes.push(newNote);
+        for (var file of result.files) {
+            if (file.fileName == selectedFile.fileName) {
+                file.review.internalNotes.push(newNote);
+            }
+        }
     }
     await result.save();
     res.status(200).send("OK");
@@ -74,10 +114,31 @@ router.post("/requestpayment/:submissionID", auth.required, async function (req,
         _id: req.params.submissionID,
     });
 
-    //send email to request payment from the patron
-    paymentHandler.completeReview(submission);
+    let finalPaymentAmount = 0.0;
+    let acceptedFiles = [];
+    let rejectedFiles = [];
 
+    for (var file of submission.files) {
+        if (file.review.descision == "Accepted") {
+            let thisPrice = Math.max(file.review.slicedHours + file.review.slicedMinutes / 60, 1);
+            finalPaymentAmount += thisPrice;
+            acceptedFiles.push({
+                filename: file.fileName,
+                notes: file.review.patronNotes,
+                price: thisPrice.toFixed(2),
+            });
+        } else {
+            rejectedFiles.push({
+                filename: file.fileName,
+                notes: file.review.patronNotes,
+            });
+        }
+    }
+    finalPaymentAmount = finalPaymentAmount.toFixed(2);
+    submission.requestedPrice = finalPaymentAmount;
     submission.timestampPaymentRequested = now;
+    submission.paymentRequestingName = req.user.name;
+    submission.paymentRequestingEUID = req.user.euid;
 
     for (var file of submission.files) {
         if (file.review.descision == "Accepted") {
@@ -89,6 +150,8 @@ router.post("/requestpayment/:submissionID", auth.required, async function (req,
     }
 
     await submission.save();
+
+    paymentHandler.completeReview(submission, finalPaymentAmount, acceptedFiles, rejectedFiles);
 
     res.status(200).send("OK");
 });
@@ -123,6 +186,27 @@ router.post("/waive/:submissionID", auth.required, async function (req, res) {
             if (file.status == "PENDING_PAYMENT") {
                 file.payment.isPendingWaive = true;
             }
+        }
+    }
+
+    await submission.save();
+
+    res.status(200).send("OK");
+});
+
+/* -------------------------------------------------------------------------- */
+/*                             Undo Waive Request                             */
+/* -------------------------------------------------------------------------- */
+
+router.post("/undowaive/:submissionID", auth.required, async function (req, res) {
+    var submission = await submissions.findOne({
+        _id: req.params.submissionID,
+    });
+
+    submission.isPendingWaive = false;
+    for (var file of submission.files) {
+        if (file.status == "PENDING_PAYMENT") {
+            file.payment.isPendingWaive = false;
         }
     }
 

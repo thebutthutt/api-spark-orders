@@ -1,6 +1,7 @@
 var mongoose = require("mongoose");
 
 var attemptSchema = mongoose.Schema({
+    prettyID: { type: String, default: "" },
     timestampStarted: {
         type: Date,
         default: "1970",
@@ -55,11 +56,19 @@ var attemptSchema = mongoose.Schema({
         default: 0,
         required: true,
     },
-    startedBy: {
+    startedByName: {
         type: String,
         default: "",
     },
-    finishedBy: {
+    startedByEUID: {
+        type: String,
+        default: "",
+    },
+    finishedByName: {
+        type: String,
+        default: "",
+    },
+    finishedByEUID: {
         type: String,
         default: "",
     },

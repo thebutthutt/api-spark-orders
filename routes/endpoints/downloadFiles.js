@@ -8,7 +8,6 @@ const gfs = require("../../storage/downloader");
 router.get("/stl/:fileID", auth.optional, async function (req, res) {
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
         var thisFile = submission.files.id(req.params.fileID);
-        console.log(thisFile.stlID);
         gfs.find({ _id: thisFile.stlID }).toArray((err, files) => {
             if (!files || files.length === 0) {
                 return res.status(404).json({

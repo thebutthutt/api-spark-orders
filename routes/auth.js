@@ -47,7 +47,7 @@ const auth = {
 var requireLogin = function (req, res, next) {
     auth.required(req, res, function (err) {
         if (err && err.name === "UnauthorizedError") {
-            return res.status(401).send("Login again");
+            return res.status(401).json({ error: "User not authenticated" });
         } else {
             return next();
         }
@@ -74,7 +74,7 @@ var requireAdmin = function (req, res, next) {
                     if (thisUser.isSuperAdmin) {
                         return next();
                     } else {
-                        return res.status(402).send("User is not an admin");
+                        return res.status(402).json({ error: "User not administrator" });
                     }
                 }
             });

@@ -47,7 +47,7 @@ mongoose
         app.use(express.urlencoded({ extended: true })); //parse URL ecoded data
         app.use(express.json()); //parse incoming JSON data
         app.use(passport.initialize()); //use our initialised passport instance
-        //app.use(cors()); //default CORS config
+        app.use(cors()); //default CORS config
 
         app.use("/", require("./routes/router"));
 

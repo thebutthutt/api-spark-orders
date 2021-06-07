@@ -18,7 +18,6 @@ var singleFileSchema = mongoose.Schema({
             "PICKED_UP",
             "REJECTED",
             "STALE_ON_PAYMENT",
-            "STALE_ON_PICKUP",
             "REPOSESSED",
             "LOST_IN_TRANSIT",
         ],
@@ -46,7 +45,8 @@ var singleFileSchema = mongoose.Schema({
             default: "Accepted",
             required: true,
         },
-        reviewedBy: { type: String, default: "" },
+        reviewedByName: { type: String, default: "" },
+        reviewedByEUID: { type: String, default: "" },
         timestampReviewed: { type: Date, default: "1970" }, //timestamp of last review NOT when payment was requested
         internalNotes: {
             type: [
@@ -94,6 +94,7 @@ var singleFileSchema = mongoose.Schema({
             default: "UNPAID",
             required: true,
         },
+
         waivedBy: { type: String, default: "" },
         price: { type: Number, default: 0 },
     },
@@ -133,6 +134,8 @@ var printSubmissionSchema = mongoose.Schema({
     departmentProject: { type: String, default: "" },
     timestampSubmitted: { type: Date, default: "1970" },
     timestampPaymentRequested: { type: Date, default: "1970" },
+    paymentRequestingName: { type: String, default: "" },
+    paymentRequestingEUID: { type: String, default: "" },
     timestampPaid: { type: Date, default: "1970" },
     timestampPickupRequested: { type: Date, default: "1970" },
     requestedPrice: { type: Number, default: 0 },
@@ -142,5 +145,24 @@ var printSubmissionSchema = mongoose.Schema({
     allFilesPickedUp: { type: Boolean, default: false },
     isPendingWaive: { type: Boolean, default: false },
     files: [singleFileSchema],
+    libPaymentObject: {
+        type: {
+            request_contents: {
+                type: {
+                    account: { type: String, default: "" },
+                    amount: { type: String, default: "" },
+                    submissionID: { type: String, default: "" },
+                    libhash: { type: String, default: "" },
+                },
+                default: null,
+            },
+            account: { type: String, default: "" },
+            transaction_id: { type: String, default: "" },
+            transaction_date: { type: String, default: "" },
+            amount: { type: String, default: "" },
+            libhash: { type: String, default: "" },
+        },
+        default: null,
+    },
 });
 module.exports = mongoose.model("Submission", printSubmissionSchema);

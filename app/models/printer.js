@@ -3,6 +3,8 @@ var mongoose = require("mongoose");
 var printerSchema = mongoose.Schema({
     model: { type: String, default: "" },
     name: { type: String, default: "" },
+    shortName: { type: String, default: "" },
+    imageID: { type: mongoose.Schema.ObjectId, default: null },
     barcode: { type: String, default: "" },
     description: { type: String, default: "" },
     serviceLevel: { type: String, enum: ["FULL_SERVICE", "SELF_SERVICE"], default: "FULL_SERVICE" },

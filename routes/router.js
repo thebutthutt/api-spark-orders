@@ -8,5 +8,6 @@ router.use("/submit", require("./endpoints/addSubmission"));
 router.use("/download", require("./endpoints/downloadFiles"));
 router.use("/attempts", require("./endpoints/attempts"));
 router.use("/printers", require("./endpoints/printers"));
+router.use("/payment", require("./endpoints/payment"));
 
 module.exports = router;

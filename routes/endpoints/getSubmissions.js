@@ -92,7 +92,11 @@ router.post("/filter", auth.required, async function (req, res) {
         submissionTypes.push("PERSONAL");
     }
 
+    let requirePrinted = requestedFilters.printedLocation.length != 2;
+    let requireWaitingForPickup = requestedFilters.waitingLocation.length != 2;
+
     let minAttempts = requestedFilters.waitingLocation.length != 2 ? 1 : 0;
+    let searchQuery = requestedFilters.searchQuery.trim();
 
     let results = await submissions.aggregate([
         /* --------------------- Match submission level filters --------------------- */
@@ -103,6 +107,39 @@ router.post("/filter", auth.required, async function (req, res) {
                     { "paymentRequest.timestampPaymentRequested": { $lte: reviewed.before, $gte: reviewed.after } },
                     { "payment.timestampPaid": { $lte: paid.before, $gte: paid.after } },
                     { "submissionDetails.submissionType": { $in: submissionTypes } },
+                    {
+                        $or: [
+                            {
+                                $and: [{ "flags.isArchived": { $eq: true } }, { $expr: requestedFilters.showArchived }],
+                            },
+                            {
+                                $and: [
+                                    { "flags.isArchived": { $ne: true } },
+                                    { $expr: requestedFilters.showUnarchived },
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        $or: [
+                            {
+                                $and: [
+                                    { $expr: { $gte: [{ $strLenCP: searchQuery }, 1] } },
+                                    {
+                                        $or: [
+                                            { "patron.fname": { $regex: searchQuery, $options: "gmi" } },
+                                            { "patron.lname": { $regex: searchQuery, $options: "gmi" } },
+                                            { "patron.email": { $regex: searchQuery, $options: "gmi" } },
+                                            { "patron.phone": { $regex: searchQuery, $options: "gmi" } },
+                                            { "patron.euid": { $regex: searchQuery, $options: "gmi" } },
+                                            { "files.fileName": { $regex: searchQuery, $options: "gmi" } },
+                                        ],
+                                    },
+                                ],
+                            },
+                            { $expr: { $lt: [{ $strLenCP: searchQuery }, 1] } },
+                        ],
+                    },
                 ],
             },
         },
@@ -115,8 +152,30 @@ router.post("/filter", auth.required, async function (req, res) {
                     { "files.status": { $in: requestedFilters.status } },
                     { "files.printing.timestampPrinted": { $lte: printed.before } },
                     { "files.printing.timestampPrinted": { $gte: printed.after } },
-                    { $expr: { $gte: [{ $size: "$files.printing.attemptIDs" }, minAttempts] } },
-                    { "files.printing.printingLocation": { $in: requestedFilters.waitingLocation } },
+                    {
+                        $or: [
+                            {
+                                $and: [
+                                    { $expr: requirePrinted },
+                                    { $expr: { $gte: [{ $size: "$files.printing.attemptIDs" }, minAttempts] } },
+                                    { "files.printing.printingLocation": { $in: requestedFilters.printedLocation } },
+                                ],
+                            },
+                            { $expr: { $ne: [requirePrinted, true] } },
+                        ],
+                    },
+                    {
+                        $or: [
+                            {
+                                $and: [
+                                    { $expr: requireWaitingForPickup },
+                                    { "files.status": { $in: ["WAITING_FOR_PICKUP", "PICKED_UP", "REPOSESSED"] } },
+                                    { "files.request.pickupLocation": { $in: requestedFilters.waitingLocation } },
+                                ],
+                            },
+                            { $expr: { $ne: [requireWaitingForPickup, true] } },
+                        ],
+                    },
                     { "files.pickup.timestampPickedUp": { $lte: pickedUp.before } },
                     { "files.pickup.timestampPickedUp": { $gte: pickedUp.after } },
                     { "files.payment.paymentType": { $in: requestedFilters.paymentType } },

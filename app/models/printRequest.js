@@ -20,7 +20,6 @@ var singleFileSchema = mongoose.Schema({
             "PICKED_UP",
             "REJECTED",
             "STALE_ON_PAYMENT",
-            "STALE_ON_PICKUP",
             "REPOSESSED",
             "LOST_IN_TRANSIT",
         ],

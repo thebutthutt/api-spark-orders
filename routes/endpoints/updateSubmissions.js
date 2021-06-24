@@ -55,6 +55,17 @@ const uploader = require("../../storage/uploader");
 //     }
 // });
 
+// let allSubmissions = submissions.find({}, function (err, res) {
+//     for (let submission of res) {
+//         for (let file of submission.files) {
+//             if (file.status == "STALE_ON_PICKUP") {
+//                 file.status = "REPOSESSED";
+//             }
+//         }
+//         submission.save();
+//     }
+// });
+
 /* -------------------------------------------------------------------------- */
 /*                               Review One File                              */
 /* -------------------------------------------------------------------------- */

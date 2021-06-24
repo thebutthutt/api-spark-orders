@@ -18,7 +18,7 @@ const uploader = require("../../storage/uploader");
 /* -------------------------------------------------------------------------- */
 /*             Get all printers with their currently printing data            */
 /* -------------------------------------------------------------------------- */
-router.get("/", auth.required, async function (req, res) {
+router.get("/list", auth.required, async function (req, res) {
     let allPrinters = await printers.aggregate([
         {
             $addFields: {

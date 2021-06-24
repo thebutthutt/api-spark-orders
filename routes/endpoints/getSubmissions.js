@@ -13,41 +13,6 @@ const numPerPage = 10;
 /*                          Submission Filters Return                         */
 /* -------------------------------------------------------------------------- */
 router.post("/filter", auth.required, async function (req, res) {
-    /**
-     * {
-     * status: [
-     *      UNREVIEWED,
-     *      REVIEWED,
-     *      PEDNDING_PAYMENT,
-     *      READY_TO_PRINT,
-     *      PRINTING,
-     *      IN_TRANSIT,
-     *      WAITING_FOR_PICKUP,
-     *      PICKED_UP,
-     *      REJECTED,
-     *      STALE_ON_PAYMENT,
-     *      STALE_ON_PICKUP,
-     *      RESPOSESSED,
-     *      LOST_IN_TRANSIT
-     * ],
-     * submittedBefore: date, defaults to tomorrow
-     * submittedAfter: date, defaults to 1800
-     * reviewedBefore ""
-     * reviewedAfter ""
-     * paidBefore ""
-     * paidAfter ""
-     * printedBefore ""
-     * printedAfter ""
-     * pickedupBefore ""
-     * pickedupAfter ""
-     * paymentType : ['PAID', 'WIAVED', 'UNPAID']
-     * pickupLocation: ['Willis Library', 'Discovery Park']
-     * showPersonal: Boolean
-     * showClass: Boolean
-     * showInternal: Boolean
-     * showFullSubmission: Boolean
-     * }
-     */
     var requestedFilters = req.body;
     let pageNum = req.body.currentPage || 1;
 
@@ -263,6 +228,44 @@ router.post("/filter", auth.required, async function (req, res) {
     let totalCount = results[0].totalCount;
 
     res.status(200).json({ submissions: pageSubmissions, totalCount: totalCount });
+});
+
+router.get("/ready-queue", auth.required, async function (req, res) {
+    let results = await submissions.aggregate([
+        /* ------------------------ Match file level filters ------------------------ */
+        { $unwind: "$files" },
+        {
+            $match: {
+                "files.status": "READY_TO_PRINT",
+            },
+        },
+
+        /* -------------------------- Grab attempt details -------------------------- */
+        {
+            $lookup: {
+                from: "attempts",
+                localField: "files.printing.attemptIDs",
+                foreignField: "_id",
+                as: "files.printing.attemptDetails",
+            },
+        },
+
+        /* ------------------------ Rebuild Files subdocument ----------------------- */
+        {
+            $group: {
+                _id: "$_id",
+                object: { $mergeObjects: "$$ROOT" },
+                files: { $addToSet: "$files" },
+            },
+        },
+        { $addFields: { "object.files": "$files" } },
+        { $replaceRoot: { newRoot: "$object" } },
+
+        /* --------------------- Sort by most recently submitted -------------------- */
+        { $sort: { "submissionDetails.timestampSubmitted": -1 } },
+    ]);
+
+    res.status(200).json({ submissions: results });
 });
 
 router.get("/thumbnail/:fileID", auth.optional, function (req, res) {

@@ -92,7 +92,9 @@ router.post("/update/:printerID", uploader.any(), auth.required, async function 
 
         if (printer.imageID) {
             console.log("deleting");
-            gfs.delete(printer.imageID);
+            gfs.delete(printer.imageID, (err) => {
+                console.log("err delete printer image");
+            });
         }
 
         printer.imageID = imageFile.id;
@@ -107,7 +109,9 @@ router.post("/delete/:printerID", auth.admin, async function (req, res) {
     let printer = await printers.findById(req.params.printerID);
     if (printer.imageID) {
         console.log("deleting");
-        gfs.delete(printer.imageID);
+        gfs.delete(printer.imageID, (err) => {
+            console.log("err delete printer image");
+        });
     }
     await printers.deleteOne({ _id: req.params.printerID });
     res.status(200).send("OK");

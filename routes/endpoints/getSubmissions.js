@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
+const attempts = mongoose.model("Attempt");
+const gfs = require("../../storage/downloader");
 const auth = require("../auth");
+const numPerPage = 10;
 
 /* -------------------------------------------------------------------------- */
 /*                          Submission Filters Return                         */
@@ -44,6 +47,8 @@ router.post("/filter", auth.required, async function (req, res) {
      * }
      */
     var requestedFilters = req.body;
+    let pageNum = req.body.currentPage || 1;
+
     let submitted = {
         before: new Date(requestedFilters.submittedBefore != null ? requestedFilters.submittedBefore : "3031"),
         after: new Date(requestedFilters.submittedAfter != null ? requestedFilters.submittedAfter : "1900"),
@@ -74,77 +79,144 @@ router.post("/filter", auth.required, async function (req, res) {
     };
     pickedUp.before.setDate(pickedUp.before.getDate() + 1);
 
+    let submissionTypes = [];
+    if (requestedFilters.showClass) {
+        submissionTypes.push("CLASS");
+    }
+
+    if (requestedFilters.showInternal) {
+        submissionTypes.push("INTERNAL");
+    }
+
+    if (requestedFilters.showPersonal) {
+        submissionTypes.push("PERSONAL");
+    }
+
+    let minAttempts = requestedFilters.waitingLocation.length != 2 ? 1 : 0;
+
     let results = await submissions.aggregate([
+        /* --------------------- Match submission level filters --------------------- */
         {
             $match: {
                 $and: [
-                    { timestampSubmitted: { $lte: submitted.before, $gte: submitted.after } },
-                    { timestampPaymentRequested: { $lte: reviewed.before, $gte: reviewed.after } },
-                    { timestampPaid: { $lte: paid.before, $gte: paid.after } },
+                    { "submissionDetails.timestampSubmitted": { $lte: submitted.before, $gte: submitted.after } },
+                    { "paymentRequest.timestampPaymentRequested": { $lte: reviewed.before, $gte: reviewed.after } },
+                    { "payment.timestampPaid": { $lte: paid.before, $gte: paid.after } },
+                    { "submissionDetails.submissionType": { $in: submissionTypes } },
+                ],
+            },
+        },
+
+        /* ------------------------ Match file level filters ------------------------ */
+        { $unwind: "$files" },
+        {
+            $match: {
+                $and: [
+                    { "files.status": { $in: requestedFilters.status } },
+                    { "files.printing.timestampPrinted": { $lte: printed.before } },
+                    { "files.printing.timestampPrinted": { $gte: printed.after } },
+                    { $expr: { $gte: [{ $size: "$files.printing.attemptIDs" }, minAttempts] } },
+                    { "files.printing.printingLocation": { $in: requestedFilters.waitingLocation } },
+                    { "files.pickup.timestampPickedUp": { $lte: pickedUp.before } },
+                    { "files.pickup.timestampPickedUp": { $gte: pickedUp.after } },
+                    { "files.payment.paymentType": { $in: requestedFilters.paymentType } },
+                    { "files.request.pickupLocation": { $in: requestedFilters.pickupLocation } },
+                ],
+            },
+        },
+
+        /* -------------------------- Grab attempt details -------------------------- */
+        {
+            $lookup: {
+                from: "attempts",
+                localField: "files.printing.attemptIDs",
+                foreignField: "_id",
+                as: "files.printing.attemptDetails",
+            },
+        },
+
+        /* ------------------------ Rebuild Files subdocument ----------------------- */
+        {
+            $group: {
+                _id: "$_id",
+                object: { $mergeObjects: "$$ROOT" },
+                files: { $addToSet: "$files" },
+            },
+        },
+        { $addFields: { "object.files": "$files" } },
+        { $replaceRoot: { newRoot: "$object" } },
+
+        /* --------------------- Sort by most recently submitted -------------------- */
+        { $sort: { "submissionDetails.timestampSubmitted": -1 } },
+
+        /* ------------------ Split into pagination and total count ----------------- */
+        {
+            $facet: {
+                pageSubmissions: [
+                    /* -------------------------------- Paginate -------------------------------- */
+                    { $skip: (pageNum - 1) * numPerPage },
+                    { $limit: numPerPage },
+
+                    /* -------------------------- Submission level sums ------------------------- */
                     {
-                        $or: [
-                            { $expr: { $and: [{ isForClass: true }, requestedFilters.showClass] } },
-                            { $expr: { $and: [{ isForDepartment: true }, requestedFilters.showInternal] } },
-                            {
-                                $expr: {
-                                    $and: [
-                                        { isForDepartment: false },
-                                        { isForClass: false },
-                                        requestedFilters.showPersonal,
-                                    ],
+                        $addFields: {
+                            sums: {
+                                $reduce: {
+                                    input: "$files",
+                                    initialValue: {
+                                        totalVolume: 0,
+                                        totalWeight: 0,
+                                        totalHours: 0,
+                                        totalMinutes: 0,
+                                    },
+                                    in: {
+                                        totalVolume: {
+                                            $add: ["$$value.totalVolume", "$$this.review.calculatedVolumeCm"],
+                                        },
+                                        totalWeight: { $add: ["$$value.totalWeight", "$$this.review.slicedGrams"] },
+                                        totalHours: { $add: ["$$value.totalHours", "$$this.review.slicedHours"] },
+                                        totalMinutes: { $add: ["$$value.totalMinutes", "$$this.review.slicedMinutes"] },
+                                    },
                                 },
                             },
-                        ],
+                        },
                     },
                 ],
+                totalCount: [{ $count: "totalCount" }],
             },
         },
         {
             $set: {
-                files: {
-                    $filter: {
-                        input: "$files",
-                        as: "item",
-                        cond: {
-                            $and: [
-                                { $in: ["$$item.status", requestedFilters.status] },
-                                { $lte: ["$$item.printing.timestampPrinted", printed.before] },
-                                { $gte: ["$$item.printing.timestampPrinted", printed.after] },
-                                { $lte: ["$$item.pickup.timestampPickedUp", pickedUp.before] },
-                                { $gte: ["$$item.pickup.timestampPickedUp", pickedUp.after] },
-                                { $in: ["$$item.payment.paymentType", requestedFilters.paymentType] },
-                            ],
-                        },
-                    },
-                },
-            },
-        },
-        {
-            $addFields: {
-                sums: {
+                totalCount: {
                     $reduce: {
-                        input: "$files",
-                        initialValue: {
-                            totalVolume: 0,
-                            totalWeight: 0,
-                            totalHours: 0,
-                            totalMinutes: 0,
-                        },
-                        in: {
-                            totalVolume: { $add: ["$$value.totalVolume", "$$this.review.calculatedVolumeCm"] },
-                            totalWeight: { $add: ["$$value.totalWeight", "$$this.review.slicedGrams"] },
-                            totalHours: { $add: ["$$value.totalHours", "$$this.review.slicedHours"] },
-                            totalMinutes: { $add: ["$$value.totalMinutes", "$$this.review.slicedMinutes"] },
-                        },
+                        input: "$totalCount",
+                        initialValue: 0,
+                        in: { $add: ["$$value", "$$this.totalCount"] },
                     },
                 },
             },
         },
-        { $match: { "files.0": { $exists: true } } },
-        { $sort: { timestampSubmitted: -1 } },
     ]);
 
-    res.status(200).json({ submissions: results });
+    let pageSubmissions = results[0].pageSubmissions;
+    let totalCount = results[0].totalCount;
+
+    res.status(200).json({ submissions: pageSubmissions, totalCount: totalCount });
+});
+
+router.get("/thumbnail/:fileID", auth.optional, function (req, res) {
+    submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
+        var thisFile = submission.files.id(req.params.fileID);
+
+        gfs.find({ _id: thisFile.thumbID }).toArray((err, files) => {
+            if (!files || files.length === 0) {
+                return res.status(404).json({
+                    err: "no files exist",
+                });
+            }
+            gfs.openDownloadStream(thisFile.thumbID).pipe(res);
+        });
+    });
 });
 
 /* -------------------------------------------------------------------------- */

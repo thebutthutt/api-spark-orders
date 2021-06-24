@@ -1,4 +1,4 @@
-const GridFsStorage = require("multer-gridfs-storage");
+const { GridFsStorage } = require("multer-gridfs-storage");
 const multer = require("multer");
 
 const storage = new GridFsStorage({

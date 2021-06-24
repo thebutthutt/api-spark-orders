@@ -1,0 +1,52 @@
+body {
+    background-color: #eee;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#root {
+    margin: 1rem;
+}
+
+#content {
+    background-color: white;
+}
+
+#footer {
+    text-align: center;
+    color: #555;
+}
+
+#footer h1 {
+    margin-bottom: 0;
+    font-size: 1.5rem;
+}
+
+#footer h2 {
+    margin-top: 0;
+    margin-bottom: 0.3rem;
+    font-size: 1.2rem;
+}
+
+#footer table {
+    text-align: center;
+    margin: auto;
+    margin-top: 0.3rem;
+    color: #555;
+}
+
+#footer table td {
+    padding: 0 1rem;
+}
+
+.titles {
+    font-weight: bold;
+}
+
+.locations {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.numbers {
+    font-size: 0.9rem;
+}

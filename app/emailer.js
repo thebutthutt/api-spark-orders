@@ -3,6 +3,8 @@
 const Email = require("email-templates");
 const { template, reject } = require("lodash");
 var nodemailer = require("nodemailer");
+const mongoose = require("mongoose");
+const submissions = mongoose.model("Submission");
 const path = require("path");
 
 var smtpserver = "mailhost.unt.edu";
@@ -39,10 +41,11 @@ const email = new Email({
             relativeTo: path.join(__dirname, "emails", "_css"),
         },
     },
+    preview: false,
 });
 
 module.exports = {
-    requestPayment: function (submission, acceptedFiles, rejectedFiles, amount, url) {
+    requestPayment: async function (submission, acceptedFiles, rejectedFiles, amount, url, callback) {
         var recipient = submission.patron.email;
 
         if (acceptedFiles.length < 1) {
@@ -72,6 +75,12 @@ module.exports = {
                         amount: amount,
                         url: url,
                     },
+                })
+                .then(async () => {
+                    let dbSubmission = await submissions.findById(submission._id);
+                    dbSubmission.payment.paymentURL = url;
+                    await dbSubmission.save();
+                    callback();
                 })
                 .catch(console.error);
         }

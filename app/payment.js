@@ -22,13 +22,22 @@ function generateURL(amount, submissionID) {
 }
 
 module.exports = {
-    completeReview: async function (submission, finalPaymentAmount, acceptedFiles, rejectedFiles) {
+    completeReview: function (submission, finalPaymentAmount, acceptedFiles, rejectedFiles, callback) {
         let paymentURL = { href: "" };
         if (finalPaymentAmount >= 1) {
             paymentURL = generateURL(finalPaymentAmount, submission._id);
         }
 
-        newmailer.requestPayment(submission, acceptedFiles, rejectedFiles, finalPaymentAmount, paymentURL.href);
+        newmailer.requestPayment(
+            submission,
+            acceptedFiles,
+            rejectedFiles,
+            finalPaymentAmount,
+            paymentURL.href,
+            function () {
+                callback();
+            }
+        );
     },
 
     //validate an incoming payment confirmation url

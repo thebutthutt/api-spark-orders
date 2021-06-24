@@ -1,13 +1,9 @@
 //BACKEND SERVER WEBSOCKET
-var printHandler = require("../handlers/printHandler.js");
+//var printHandler = require("../handlers/printHandler.js");
 const WebSocket = require("ws");
+
 module.exports = function (server) {
     console.log("loaded");
-    //=========================================
-    //				WEB SOCKET
-    //	Makes signature pad talk to browsers
-    //			   VERY IMPORTANT
-    //=========================================
     const wss = new WebSocket.Server({
         server,
     });
@@ -92,10 +88,7 @@ messageStructure: {
                 var obj = JSON.parse(data);
 
                 //if a tech asks for a signature, tell the signature pad to work
-                if (
-                    obj.sender == "tech" &&
-                    obj.command == "requestPatronSignature"
-                ) {
+                if (obj.sender == "tech" && obj.command == "requestPatronSignature") {
                     if (obj.location == "willis") {
                         currentWillisRequestingIndex = clientData.yourID; //mark what client is interacting with the signature pad
                         currentWillisRequestingID = obj.data.fileID; //the ID of the file being signed for
@@ -118,11 +111,7 @@ messageStructure: {
                         currentDPRequestingIndex = clientData.yourID; //mark what client is interacting with the signature pad
                         currentDPRequestingID = obj.data.fileID; //the ID of the file being signed for
                         numPickup = obj.data.numPickup;
-                        console.log(
-                            "dp is asking patron to sign",
-                            currentDPRequestingIndex,
-                            currentDPRequestingID
-                        );
+                        console.log("dp is asking patron to sign", currentDPRequestingIndex, currentDPRequestingID);
 
                         //send the signature pad the request for a signaturee
                         CLIENTS[dp].send(
@@ -134,10 +123,7 @@ messageStructure: {
                             })
                         );
                     }
-                } else if (
-                    obj.sender == "messiah" &&
-                    obj.command == "recievePatronSignature"
-                ) {
+                } else if (obj.sender == "messiah" && obj.command == "recievePatronSignature") {
                     if (obj.location == "willis") {
                         if (obj.data.fileID == currentWillisRequestingID) {
                             //send request for login to the technicians screen
@@ -184,10 +170,7 @@ messageStructure: {
                             );
                         }
                     }
-                } else if (
-                    obj.sender == "tech" &&
-                    obj.command == "recieveAdminLogin"
-                ) {
+                } else if (obj.sender == "tech" && obj.command == "recieveAdminLogin") {
                     if (obj.location == "willis") {
                         CLIENTS[willis].send(
                             JSON.stringify({
@@ -195,15 +178,8 @@ messageStructure: {
                                 command: "resetScreen",
                             })
                         );
-                        console.log(
-                            "picking up at willis",
-                            currentWillisRequestingIndex,
-                            currentWillisRequestingID
-                        );
-                        printHandler.markPickedUp(
-                            currentWillisRequestingID,
-                            numPickup
-                        );
+                        console.log("picking up at willis", currentWillisRequestingIndex, currentWillisRequestingID);
+                        printHandler.markPickedUp(currentWillisRequestingID, numPickup);
                         currentWillisRequestingID = -1;
                         currentWillisRequestingIndex = -1;
                     } else {
@@ -213,15 +189,8 @@ messageStructure: {
                                 command: "resetScreen",
                             })
                         );
-                        console.log(
-                            "picking up at dp",
-                            currentDPRequestingIndex,
-                            currentDPRequestingID
-                        );
-                        printHandler.markPickedUp(
-                            currentDPRequestingID,
-                            numPickup
-                        );
+                        console.log("picking up at dp", currentDPRequestingIndex, currentDPRequestingID);
+                        printHandler.markPickedUp(currentDPRequestingID, numPickup);
                         currentDPRequestingID = -1;
                         currentDPRequestingIndex = -1;
                     }

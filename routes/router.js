@@ -9,5 +9,6 @@ router.use("/download", require("./endpoints/downloadFiles"));
 router.use("/attempts", require("./endpoints/attempts"));
 router.use("/printers", require("./endpoints/printers"));
 router.use("/payment", require("./endpoints/payment"));
+router.use("/pickup", require("./endpoints/pickup"));
 
 module.exports = router;

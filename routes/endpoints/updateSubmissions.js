@@ -42,6 +42,19 @@ const uploader = require("../../storage/uploader");
 //     }
 // });
 
+// let allSubmissions = submissions.find({}, function (err, res) {
+//     for (let submission of res) {
+//         for (let file of submission.files) {
+//             let backupName = file.fileName;
+//             file.fileName = file.originalFileName;
+//             file.originalFileName = backupName;
+
+//             console.log(file.fileName);
+//         }
+//         submission.save();
+//     }
+// });
+
 /* -------------------------------------------------------------------------- */
 /*                               Review One File                              */
 /* -------------------------------------------------------------------------- */
@@ -49,29 +62,47 @@ router.post("/review/:fileID", uploader.any(), auth.required, async function (re
     var fileID = req.params.fileID;
     let jsonData = JSON.parse(req.body.jsonData);
 
+    //get submission and file
     var result = await submissions.findOne({ "files._id": fileID });
     var selectedFile = result.files.id(fileID);
 
+    //remove old gcode if exist
+    gfs.delete(selectedFile.gcodeID, (err) => {
+        if (err) {
+            console.log("Error deleting gcode, but this is fine");
+        }
+    });
+
+    //create new note
     let newNote = jsonData.newInternalNote;
     newNote.techName = req.user.name;
     newNote.techEUID = req.user.euid;
 
-    result.allFilesReviewed = true;
-    for (var file of result.files) {
-        if (file.stlID.toString() == selectedFile.stlID.toString()) {
+    //add review to file
+    for (let file of result.files) {
+        if (file.copyGroupID == selectedFile.copyGroupID) {
             file.status = "REVIEWED";
             file.gcodeID = jsonData.review.descision == "Accepted" ? req.files[0].id : null;
             file.review = Object.assign(file.review, jsonData.review);
             file.review.reviewedByName = req.user.name;
-            file.review.reviewedByEUID = req.user.name;
-            file.review.internalNotes.push(newNote);
-            file.review.gcodeName = jsonData.review.descision == "Accepted" ? req.files[0].filename : "";
-        } else {
-            if (file.status == "UNREVIEWED") {
-                result.allFilesReviewed = false;
+            file.review.reviewedByEUID = req.user.euid;
+
+            if (newNote.notes.length > 0) {
+                file.review.internalNotes.push(newNote);
             }
+
+            file.review.gcodeName = jsonData.review.descision == "Accepted" ? req.files[0].filename : "";
         }
     }
+
+    result.flags.allFilesReviewed = result.files.reduce((allReviewed, file) => {
+        if (file.copyGroupID == selectedFile.copyGroupID) {
+            return allReviewed && true;
+        } else {
+            console.log(allReviewed && file.status == "REVIEWED");
+            return allReviewed && file.status == "REVIEWED";
+        }
+    }, true);
 
     await result.save();
 
@@ -84,9 +115,11 @@ router.post("/review/:fileID", uploader.any(), auth.required, async function (re
 router.post("/addnote/:fileID", auth.required, async function (req, res) {
     var fileID = req.params.fileID;
 
+    //get submission and file
     var result = await submissions.findOne({ "files._id": fileID });
     var selectedFile = result.files.id(fileID);
 
+    //add note if it has content
     if (req.body.note.length > 0) {
         let newNote = {
             techName: req.user.name,
@@ -96,7 +129,7 @@ router.post("/addnote/:fileID", auth.required, async function (req, res) {
         };
 
         for (var file of result.files) {
-            if (file.fileName == selectedFile.fileName) {
+            if (file.copyGroupID == selectedFile.copyGroupID) {
                 file.review.internalNotes.push(newNote);
             }
         }
@@ -110,6 +143,8 @@ router.post("/addnote/:fileID", auth.required, async function (req, res) {
 /* -------------------------------------------------------------------------- */
 router.post("/requestpayment/:submissionID", auth.required, async function (req, res) {
     var now = new Date();
+
+    //get submission
     var submission = await submissions.findOne({
         _id: req.params.submissionID,
     });
@@ -118,6 +153,7 @@ router.post("/requestpayment/:submissionID", auth.required, async function (req,
     let acceptedFiles = [];
     let rejectedFiles = [];
 
+    //calculate file and submission price(s)
     for (var file of submission.files) {
         if (file.review.descision == "Accepted") {
             let thisPrice = Math.max(file.review.slicedHours + file.review.slicedMinutes / 60, 1);
@@ -135,11 +171,14 @@ router.post("/requestpayment/:submissionID", auth.required, async function (req,
         }
     }
     finalPaymentAmount = finalPaymentAmount.toFixed(2);
-    submission.requestedPrice = finalPaymentAmount;
-    submission.timestampPaymentRequested = now;
-    submission.paymentRequestingName = req.user.name;
-    submission.paymentRequestingEUID = req.user.euid;
 
+    //add payment request data to submission
+    submission.paymentRequest.requestedPrice = finalPaymentAmount;
+    submission.paymentRequest.timestampPaymentRequested = now;
+    submission.paymentRequest.paymentRequestingName = req.user.name;
+    submission.paymentRequest.paymentRequestingEUID = req.user.euid;
+
+    //update file statusees
     for (var file of submission.files) {
         if (file.review.descision == "Accepted") {
             file.status = "PENDING_PAYMENT";
@@ -149,11 +188,14 @@ router.post("/requestpayment/:submissionID", auth.required, async function (req,
         }
     }
 
+    //update submission status
+    submission.currentQueue = "PAYMENT";
+
     await submission.save();
 
-    paymentHandler.completeReview(submission, finalPaymentAmount, acceptedFiles, rejectedFiles);
-
-    res.status(200).send("OK");
+    paymentHandler.completeReview(submission, finalPaymentAmount, acceptedFiles, rejectedFiles, function () {
+        res.status(200).send("OK");
+    });
 });
 
 /* -------------------------------------------------------------------------- */
@@ -170,7 +212,7 @@ router.post("/waive/:submissionID", auth.required, async function (req, res) {
 
     if (thisUser.isSuperAdmin) {
         //fully waive this submission
-        submission.timestampPaid = now;
+        submission.payment.timestampPaid = now;
         for (var file of submission.files) {
             if (file.status == "PENDING_PAYMENT") {
                 file.status = "READY_TO_PRINT";
@@ -179,9 +221,13 @@ router.post("/waive/:submissionID", auth.required, async function (req, res) {
                 file.payment.waivedBy = thisUser.name;
             }
         }
+
+        submission.currentQueue = "PRINT";
+
+        //TODO: send waived email
     } else {
         //mark this submission as pending waive
-        submission.isPendingWaive = true;
+        submission.flags.isPendingWaive = true;
         for (var file of submission.files) {
             if (file.status == "PENDING_PAYMENT") {
                 file.payment.isPendingWaive = true;
@@ -203,11 +249,53 @@ router.post("/undowaive/:submissionID", auth.required, async function (req, res)
         _id: req.params.submissionID,
     });
 
-    submission.isPendingWaive = false;
+    submission.flags.isPendingWaive = false;
     for (var file of submission.files) {
         if (file.status == "PENDING_PAYMENT") {
             file.payment.isPendingWaive = false;
         }
+    }
+
+    await submission.save();
+
+    res.status(200).send("OK");
+});
+
+/* -------------------------------------------------------------------------- */
+/*                             Mark files arrived                             */
+/* -------------------------------------------------------------------------- */
+router.post("/arrived", auth.required, async function (req, res) {
+    let fileIDs = req.body.fileIDs;
+    let now = new Date();
+    let submission = await submissions.findOne({ "files._id": fileIDs[0] });
+
+    for (let file of submission.files) {
+        if (fileIDs.includes(file._id)) {
+            file.status = "WAITING_FOR_PICKUP";
+            file.pickup.timestampArrivedAtPickup = now;
+        }
+    }
+
+    let allFilesArrived = submission.files.reduce((allArrived, file) => {
+        return allArrived && (file.status == "WAITING_FOR_PICKUP" || file.status == "REJECTED");
+    }, true);
+
+    if (allFilesArrived) {
+        submission.currentQueue = "PICKUP";
+        submission.pickup.timestampPickupRequested = now;
+
+        let firstWarning = new Date();
+        firstWarning.setDate(now.getDate() + 7);
+        let finalWarning = new Date();
+        finalWarning.setDate(now.getDate() + 14);
+        let resposession = new Date();
+        resposession.setDate(now.getDate() + 21);
+
+        submission.timestampFirstWarning = firstWarning;
+        submission.timestampFinalWarning = finalWarning;
+        submission.timestampReposessed = resposession;
+
+        //TODO: send pickup email
     }
 
     await submission.save();
@@ -229,17 +317,17 @@ router.post("/delete/file/:fileID", auth.required, async function (req, res) {
 
     //delete stl from disk
 
-    try {
-        gfs.delete(thisFile.stlID);
-    } catch (err) {
-        console.log("STL file not found when deleting. This is fine though");
-    }
+    gfs.delete(thisFile.stlID, (err) => {
+        if (err) {
+            console.log("Error deleting stl, but this is fine");
+        }
+    });
 
-    try {
-        gfs.delete(thisFile.gcodeID);
-    } catch (err) {
-        console.log("GCODE file not found when deleting. This is fine though");
-    }
+    gfs.delete(thisFile.gcodeID, (err) => {
+        if (err) {
+            console.log("Error deleting gcode, but this is fine");
+        }
+    });
 
     thisFile.remove(); //remove the single file from the top level print submission
     result.numFiles -= 1; //decrement number of files associated with this print request

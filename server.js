@@ -24,6 +24,8 @@ const favicon = require("serve-favicon");
 
 let server;
 
+require("./app/pugmail");
+
 process.once("SIGUSR2", function () {
     console.log("closing");
     server.close(() => {
@@ -51,9 +53,25 @@ mongoose
 
         app.use("/", require("./routes/router"));
 
-        app.get("/", function (req, res) {
-            res.send("hello world");
+        app.set("view engine", "pug");
+        app.use(express.static(path.join(__dirname, "app", "pugmail", "_css")));
+        app.get("/testemail", function (req, res) {
+            res.render(path.join(__dirname, "app", "pugmail", "requestRecieved", "html"), {
+                title: "Hey",
+                message: "Hello there!",
+            });
         });
+
+        /**
+         * Serve static build files only in a production environment
+         */
+        if (process.env.ENVIRONMENT == "production") {
+            const root = require("path").join(__dirname, "..", "react-spark", "build");
+            app.use(express.static(root));
+            app.get("*", (req, res) => {
+                res.sendFile("index.html", { root });
+            });
+        }
 
         server = https
             .createServer(

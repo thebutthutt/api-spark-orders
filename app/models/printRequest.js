@@ -3,8 +3,10 @@ require("./patron.js");
 var singleFileSchema = mongoose.Schema({
     fileName: { type: String, default: "" },
     originalFileName: { type: String, default: "" },
+    copyGroupID: { type: Number, default: 0 },
     stlID: { type: mongoose.Schema.ObjectId, default: null },
     gcodeID: { type: mongoose.Schema.ObjectId, default: null },
+    thumbID: { type: mongoose.Schema.ObjectId, default: null },
     status: {
         type: String,
         enum: [
@@ -18,6 +20,7 @@ var singleFileSchema = mongoose.Schema({
             "PICKED_UP",
             "REJECTED",
             "STALE_ON_PAYMENT",
+            "STALE_ON_PICKUP",
             "REPOSESSED",
             "LOST_IN_TRANSIT",
         ],
@@ -78,6 +81,7 @@ var singleFileSchema = mongoose.Schema({
             required: true,
         },
         calculatedVolumeCm: { type: Number, default: 0 },
+        gcodeVolume: { type: Number, default: 0 },
     },
 
     payment: {
@@ -111,10 +115,17 @@ var singleFileSchema = mongoose.Schema({
             default: [],
             required: true,
         },
+        attemptNames: {
+            type: [{ type: String, default: "" }],
+            default: [],
+        },
+        failedAttempts: { type: Number, default: 0 },
         timestampPrinted: { type: Date, default: "1970" },
     },
 
     pickup: {
+        patronName: { type: String, default: "" },
+        pickupEUID: { type: String, default: "" },
         timestampArrivedAtPickup: { type: Date, default: "1970" },
         timestampReposessed: { type: Date, default: "1970" },
         timestampPickedUp: { type: Date, default: "1970" },
@@ -125,44 +136,103 @@ var singleFileSchema = mongoose.Schema({
 // define the schema for a single patron submission
 var printSubmissionSchema = mongoose.Schema({
     patron: { type: mongoose.model("Patron").schema },
-    isForClass: { type: Boolean, default: false },
-    classCode: { type: String, default: "" },
-    professor: { type: String, default: "" },
-    projectType: { type: String, default: "" },
-    isForDepartment: { type: Boolean, default: false },
-    department: { type: String, default: "" },
-    departmentProject: { type: String, default: "" },
-    timestampSubmitted: { type: Date, default: "1970" },
-    timestampPaymentRequested: { type: Date, default: "1970" },
-    paymentRequestingName: { type: String, default: "" },
-    paymentRequestingEUID: { type: String, default: "" },
-    timestampPaid: { type: Date, default: "1970" },
-    timestampPickupRequested: { type: Date, default: "1970" },
-    requestedPrice: { type: Number, default: 0 },
-    numFiles: { type: Number, default: 0 },
-    allFilesReviewed: { type: Boolean, default: false },
-    allFilesPrinted: { type: Boolean, default: false },
-    allFilesPickedUp: { type: Boolean, default: false },
-    isPendingWaive: { type: Boolean, default: false },
-    files: [singleFileSchema],
-    libPaymentObject: {
-        type: {
-            request_contents: {
-                type: {
-                    account: { type: String, default: "" },
-                    amount: { type: String, default: "" },
-                    submissionID: { type: String, default: "" },
-                    libhash: { type: String, default: "" },
-                },
-                default: null,
-            },
-            account: { type: String, default: "" },
-            transaction_id: { type: String, default: "" },
-            transaction_date: { type: String, default: "" },
-            amount: { type: String, default: "" },
-            libhash: { type: String, default: "" },
+
+    currentQueue: {
+        type: String,
+        enum: ["REVIEW", "PAYMENT", "PRINT", "PICKUP", "DONE"],
+        default: "REVIEW",
+    },
+
+    submissionDetails: {
+        submissionType: {
+            type: String,
+            enum: ["PERSONAL", "CLASS", "INTERNAL"],
+            default: "PERSONAL",
         },
-        default: null,
+
+        classDetails: {
+            classCode: { type: String, default: "" },
+            professor: { type: String, default: "" },
+            project: { type: String, default: "" },
+        },
+
+        internalDetails: {
+            department: { type: String, default: "" },
+            project: { type: String, default: "" },
+        },
+
+        timestampSubmitted: { type: Date, default: "1970" },
+        numFiles: { type: Number, default: 0 },
+    },
+
+    files: [singleFileSchema],
+
+    flags: {
+        allFilesReviewed: { type: Boolean, default: false },
+        allFilesPrinted: { type: Boolean, default: false },
+        allFilesPickedUp: { type: Boolean, default: false },
+        isPendingWaive: { type: Boolean, default: false },
+        isPendingDelete: { type: Boolean, default: false },
+        isArchived: { type: Boolean, default: false },
+    },
+
+    paymentRequest: {
+        timestampPaymentRequested: { type: Date, default: "1970" },
+        paymentRequestingName: { type: String, default: "" },
+        paymentRequestingEUID: { type: String, default: "" },
+        requestedPrice: { type: Number, default: 0 },
+    },
+
+    payment: {
+        timestampPaid: { type: Date, default: "1970" },
+        paymentURL: { type: String, default: "" },
+        libPaymentObject: {
+            type: {
+                request_contents: {
+                    type: {
+                        account: { type: String, default: "" },
+                        amount: { type: String, default: "" },
+                        submissionID: { type: String, default: "" },
+                        libhash: { type: String, default: "" },
+                    },
+                    default: null,
+                },
+                account: { type: String, default: "" },
+                transaction_id: { type: String, default: "" },
+                transaction_date: { type: String, default: "" },
+                amount: { type: String, default: "" },
+                libhash: { type: String, default: "" },
+            },
+            default: null,
+        },
+    },
+
+    pickup: {
+        timestampPickupRequested: { type: Date, default: "1970" },
+        timestampFirstWarning: { type: Date, default: "1970" },
+        timestampFinalWarning: { type: Date, default: "1970" },
+        timestampReposessed: { type: Date, default: "1970" },
+    },
+
+    emails: {
+        sentReviewed: { type: Boolean, default: false },
+        timestampReviewed: { type: Date, default: "1970" },
+
+        sentPaymentThankYou: { type: Boolean, default: false },
+        timestampPaymentThankYou: { type: Date, default: "1970" },
+
+        sentPickup: { type: Boolean, default: false },
+        timestampPickup: { type: Date, default: "1970" },
+
+        sentFirstWarning: { type: Boolean, default: false },
+        timestampFirstWarning: { type: Date, default: "1970" },
+
+        sentFinalWarning: { type: Boolean, default: false },
+        timestampFinalWarning: { type: Date, default: "1970" },
+
+        sentReposessed: { type: Boolean, default: false },
+        timestampReposessed: { type: Date, default: "1970" },
     },
 });
+
 module.exports = mongoose.model("Submission", printSubmissionSchema);

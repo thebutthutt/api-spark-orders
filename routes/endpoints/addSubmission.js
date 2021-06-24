@@ -6,7 +6,7 @@ const upload = require("../../storage/uploader");
 const gfs = require("../../storage/downloader");
 const NodeStl = require("node-stl");
 const path = require("path");
-
+var fs = require("fs");
 async function calculateVolume(fileID) {
     return new Promise((resolve, reject) => {
         let chunks = [],
@@ -39,6 +39,10 @@ router.post("/", upload.any(), async function (req, res) {
     var now = new Date();
     var jsonData = JSON.parse(req.body.jsonData);
 
+    console.log(req.files);
+
+    let pickupLocation = jsonData.pickupLocation;
+
     var newSubmission = new submissions({
         patron: {
             fname: jsonData.fname,
@@ -47,27 +51,42 @@ router.post("/", upload.any(), async function (req, res) {
             phone: jsonData.phone,
             euid: jsonData.euid,
         },
-        isForClass: jsonData.submissionType == "class" ? true : false,
-        isForDepartment: jsonData.submissionType == "internal" ? true : false,
-        classCode: jsonData.classCode,
-        professor: jsonData.professor,
-        projectType: jsonData.assignment,
-        department: jsonData.department,
-        departmentProject: jsonData.project,
-        timestampSubmitted: now,
-        numFiles: 0,
+        submissionDetails: {
+            submissionType: jsonData.submissionType,
+            classDetails: {
+                classCode: jsonData.classCode,
+                professor: jsonData.professor,
+                project: jsonData.assignment,
+            },
+            internalDetails: {
+                department: jsonData.department,
+                project: jsonData.project,
+            },
+
+            timestampSubmitted: now,
+            numFiles: 0,
+        },
+
         files: [],
     });
 
     for (var file of jsonData.files) {
         var uploadedFile = req.files.find((x) => {
-            return x.originalname == file.fileName;
+            return x.fieldname == "stl-" + file.copyGroupID;
         });
+
+        var uploadedThumbnail = req.files.find((x) => {
+            return x.fieldname == "thumb-" + file.copyGroupID;
+        });
+
+        console.log(uploadedThumbnail);
 
         let volume = await calculateVolume(uploadedFile.id);
         var tempFile = {
             fileName: uploadedFile.filename,
+            copyGroupID: file.copyGroupID,
             stlID: uploadedFile.id,
+            thumbID: uploadedThumbnail.id,
             status: "UNREVIEWED",
             request: {
                 timestampSubmitted: now,
@@ -75,6 +94,7 @@ router.post("/", upload.any(), async function (req, res) {
                 color: file.color,
                 infill: file.infill,
                 notes: file.notes,
+                pickupLocation: pickupLocation,
             },
             review: {
                 calculatedVolumeCm: volume,

@@ -3,6 +3,8 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
 const attempts = mongoose.model("Attempt");
+const path = require("path");
+const fs = require("fs");
 const gfs = require("../../storage/downloader");
 const auth = require("../auth");
 const numPerPage = 10;
@@ -266,15 +268,29 @@ router.post("/filter", auth.required, async function (req, res) {
 router.get("/thumbnail/:fileID", auth.optional, function (req, res) {
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
         var thisFile = submission.files.id(req.params.fileID);
+        if (!thisFile.thumbID) {
+            var readStream = fs.createReadStream(path.join(__dirname, "..", "..", "storage", "NotFound.png"));
 
-        gfs.find({ _id: thisFile.thumbID }).toArray((err, files) => {
-            if (!files || files.length === 0) {
+            readStream.on("open", function () {
+                // This just pipes the read stream to the response object (which goes to the client)
+                readStream.pipe(res);
+            });
+
+            readStream.on("error", function (err) {
                 return res.status(404).json({
                     err: "no files exist",
                 });
-            }
-            gfs.openDownloadStream(thisFile.thumbID).pipe(res);
-        });
+            });
+        } else {
+            gfs.find({ _id: thisFile.thumbID }).toArray((err, files) => {
+                if (!files || files.length === 0) {
+                    return res.status(404).json({
+                        err: "no files exist",
+                    });
+                }
+                gfs.openDownloadStream(thisFile.thumbID).pipe(res);
+            });
+        }
     });
 });
 

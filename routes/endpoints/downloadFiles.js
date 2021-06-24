@@ -13,8 +13,6 @@ router.get("/stl/:fileID", auth.optional, async function (req, res) {
         if (!thisFile.stlID) {
             let oldFileName = thisFile.originalFileName;
             let oldPath = path.join("/home/hcf0018/webserver/Uploads/STLs/", oldFileName);
-
-            console.log(oldPath);
             var readStream = fs.createReadStream(oldPath);
 
             readStream.on("open", function () {
@@ -46,8 +44,6 @@ router.get("/gcode/:fileID", auth.optional, function (req, res) {
         if (!thisFile.gcodeID) {
             let oldFileName = thisFile.review.gcodeName;
             let oldPath = path.join("/home/hcf0018/webserver/Uploads/Gcode/", oldFileName);
-
-            console.log(oldPath);
             var readStream = fs.createReadStream(oldPath);
 
             readStream.on("open", function () {

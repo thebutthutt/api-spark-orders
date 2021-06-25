@@ -318,46 +318,52 @@ router.post("/arrived", auth.required, async function (req, res) {
 /*                               Delete One File                              */
 /* -------------------------------------------------------------------------- */
 router.post("/delete/file/:fileID", auth.required, async function (req, res) {
-    console.log("here");
-    var fileID = req.params.fileID;
+    if (req.user) var fileID = req.params.fileID;
     var result = await submissions.findOne({
         "files._id": fileID,
     });
 
-    var thisFile = result.files.id(fileID);
+    var thisUser = await users.findById(req.user.id);
 
-    //delete stl from disk
+    if (thisUser.isSuperAdmin) {
+        var thisFile = result.files.id(fileID);
 
-    gfs.delete(thisFile.stlID, (err) => {
-        if (err) {
-            console.log("Error deleting stl, but this is fine");
-        }
-    });
+        //delete stl from disk
 
-    gfs.delete(thisFile.gcodeID, (err) => {
-        if (err) {
-            console.log("Error deleting gcode, but this is fine");
-        }
-    });
-
-    thisFile.remove(); //remove the single file from the top level print submission
-    result.numFiles -= 1; //decrement number of files associated with this print request
-
-    if (result.files.length < 1) {
-        //if no more files in this request delete the request itself
-        await submissions.deleteOne({
-            _id: result._id,
-        });
-    } else {
-        //else save the top level with one less file
-        result.allFilesReviewed = true;
-        for (var thisFile of result.files) {
-            if (!thisFile.isReviewed) {
-                result.allFilesReviewed = false;
+        gfs.delete(thisFile.stlID, (err) => {
+            if (err) {
+                console.log("Error deleting stl, but this is fine");
             }
+        });
+
+        gfs.delete(thisFile.gcodeID, (err) => {
+            if (err) {
+                console.log("Error deleting gcode, but this is fine");
+            }
+        });
+
+        thisFile.remove(); //remove the single file from the top level print submission
+        result.numFiles -= 1; //decrement number of files associated with this print request
+
+        if (result.files.length < 1) {
+            //if no more files in this request delete the request itself
+            await submissions.deleteOne({
+                _id: result._id,
+            });
+        } else {
+            //else save the top level with one less file
+            result.allFilesReviewed = true;
+            for (var thisFile of result.files) {
+                if (!thisFile.isReviewed) {
+                    result.allFilesReviewed = false;
+                }
+            }
+
+            await result.save();
         }
 
-        await result.save();
+        //TODO: send waived email
+    } else {
     }
 
     res.status(200).send("OK");

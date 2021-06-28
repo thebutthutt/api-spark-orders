@@ -1,7 +1,8 @@
 const Email = require("email-templates");
 var nodemailer = require("nodemailer");
 const path = require("path");
-
+const mongoose = require("mongoose");
+const emails = mongoose.model("Email");
 var smtpserver = "mailhost.unt.edu";
 var sender = '"SparkOrders" <no-reply.sparkorders@unt.edu>';
 var portNum = 25;
@@ -23,7 +24,7 @@ const email = new Email({
     transport: transporter,
     views: {
         options: {
-            extension: "pug", // <---- HERE
+            extension: "ejs", // <---- HERE
         },
     },
     juice: true,
@@ -39,15 +40,19 @@ const email = new Email({
 });
 
 module.exports = {
-    requestRecieved: function (submission) {
+    sendEmail: async function (templateName, submission) {
+        let emailTemplate = await emails.findOne({ templateName: templateName });
         email
             .send({
-                template: path.join(__dirname, "pugmail", "requestRecieved"),
+                template: path.join(__dirname, "pugmail", "base"),
                 message: {
                     to: submission.patron.email,
                 },
                 locals: {
+                    subject: emailTemplate.subject,
+                    bodyText: emailTemplate.bodyText,
                     submission: submission,
+                    detailLink: "http://sparkorders.library.unt.edu/submission/" + submission._id,
                 },
             })
             .catch(console.error);

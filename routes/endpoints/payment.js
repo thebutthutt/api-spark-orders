@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
 const auth = require("../auth");
+const emailer = require("../../app/pugmail");
 const payment = require("../../app/payment");
 
 /* -------------------------------------------------------------------------- */
@@ -34,7 +35,7 @@ router.post("/complete", async function (req, res) {
         paidSubmission.currentQueue = "PRINT";
 
         await paidSubmission.save();
-
+        emailer.sendEmail("paymentRecieved", paidSubmission);
         res.status(200).json({
             isValid: true,
             paidSubmission: paidSubmission,

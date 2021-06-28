@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
 const users = mongoose.model("User");
 const auth = require("../auth");
+const emailer = require("../../app/pugmail");
 const paymentHandler = require("../../app/payment");
 const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
@@ -204,9 +205,17 @@ router.post("/requestpayment/:submissionID", auth.required, async function (req,
 
     await submission.save();
 
-    paymentHandler.completeReview(submission, finalPaymentAmount, acceptedFiles, rejectedFiles, function () {
-        res.status(200).send("OK");
-    });
+    paymentHandler.completeReview(
+        submission,
+        finalPaymentAmount,
+        acceptedFiles,
+        rejectedFiles,
+        async function (paymentURL) {
+            submission.payment.paymentURL = paymentURL;
+            await submission.save();
+            res.status(200).send("OK");
+        }
+    );
 });
 
 /* -------------------------------------------------------------------------- */
@@ -234,8 +243,8 @@ router.post("/waive/:submissionID", auth.required, async function (req, res) {
         }
 
         submission.currentQueue = "PRINT";
-
-        //TODO: send waived email
+        await submission.save();
+        emailer.sendEmail("paymentWaived", submission);
     } else {
         //mark this submission as pending waive
         submission.flags.isPendingWaive = true;
@@ -244,9 +253,8 @@ router.post("/waive/:submissionID", auth.required, async function (req, res) {
                 file.payment.isPendingWaive = true;
             }
         }
+        await submission.save();
     }
-
-    await submission.save();
 
     res.status(200).send("OK");
 });
@@ -306,7 +314,7 @@ router.post("/arrived", auth.required, async function (req, res) {
         submission.timestampFinalWarning = finalWarning;
         submission.timestampReposessed = resposession;
 
-        //TODO: send pickup email
+        emailer.sendEmail("readyForPickup", submission);
     }
 
     await submission.save();
@@ -361,8 +369,6 @@ router.post("/delete/file/:fileID", auth.required, async function (req, res) {
 
             await result.save();
         }
-
-        //TODO: send waived email
     } else {
     }
 

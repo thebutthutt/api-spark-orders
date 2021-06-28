@@ -5,8 +5,7 @@ const submissions = mongoose.model("Submission");
 const upload = require("../../storage/uploader");
 const gfs = require("../../storage/downloader");
 const NodeStl = require("node-stl");
-const path = require("path");
-var fs = require("fs");
+const emailer = require("../../app/pugmail");
 async function calculateVolume(fileID) {
     return new Promise((resolve, reject) => {
         let chunks = [],
@@ -107,6 +106,7 @@ router.post("/", upload.any(), async function (req, res) {
     }
 
     await newSubmission.save();
+    emailer.sendEmail("submissionRecieved", newSubmission);
     res.status(200).send("OK");
 });
 

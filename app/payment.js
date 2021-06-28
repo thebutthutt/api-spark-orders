@@ -1,6 +1,7 @@
 const base_url = "https://payments.library.unt.edu/payment/";
 var crypto = require("crypto");
-var newmailer = require("./emailer.js");
+//var newmailer = require("./emailer.js");
+const emailer = require("./pugmail");
 const account = process.env.PAYMENT_ACCOUNT;
 const secret_key = process.env.PAYMENT_KEY;
 
@@ -22,22 +23,24 @@ function generateURL(amount, submissionID) {
 }
 
 module.exports = {
-    completeReview: function (submission, finalPaymentAmount, acceptedFiles, rejectedFiles, callback) {
+    completeReview: async function (submission, finalPaymentAmount, acceptedFiles, rejectedFiles, callback) {
         let paymentURL = { href: "" };
         if (finalPaymentAmount >= 1) {
             paymentURL = generateURL(finalPaymentAmount, submission._id);
         }
 
-        newmailer.requestPayment(
-            submission,
-            acceptedFiles,
-            rejectedFiles,
-            finalPaymentAmount,
-            paymentURL.href,
-            function () {
-                callback();
-            }
-        );
+        // newmailer.requestPayment(
+        //     submission,
+        //     acceptedFiles,
+        //     rejectedFiles,
+        //     finalPaymentAmount,
+        //     paymentURL.href,
+        //     function () {
+        //         callback();
+        //     }
+        // );
+        await emailer.sendEmail("submissionReviewed", submission);
+        callback(paymentURL.href);
     },
 
     //validate an incoming payment confirmation url

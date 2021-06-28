@@ -298,6 +298,34 @@ router.get("/thumbnail/:fileID", auth.optional, function (req, res) {
 });
 
 /* -------------------------------------------------------------------------- */
+/*                           Public submission view                           */
+/* -------------------------------------------------------------------------- */
+router.get("/public/:submissionID", auth.optional, async function (req, res) {
+    let submissionID = req.params.submissionID;
+
+    let submission = await submissions.findById(submissionID);
+    let data = JSON.parse(JSON.stringify(submission)); //deep copy submission to new object
+
+    delete data.paymentRequest.paymentRequestingName;
+    delete data.paymentRequest.paymentRequestingEUID;
+
+    for (let file of data.files) {
+        delete file.review.reviewedBy;
+        delete file.review.reviewedByName;
+        delete file.review.reviewedByEUID;
+
+        for (let note of file.review.internalNotes) {
+            delete note.techName;
+            delete note.techEUID;
+        }
+
+        delete file.payment.waivedBy;
+    }
+
+    res.status(200).json(data);
+});
+
+/* -------------------------------------------------------------------------- */
 /*                 Get Submission With Separated Specific File                */
 /* -------------------------------------------------------------------------- */
 router.get("/onefile/:fileID", auth.required, function (req, res) {

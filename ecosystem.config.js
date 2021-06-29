@@ -12,9 +12,5 @@ module.exports = {
             autorestart: true,
             watch: false,
         },
-        {
-            name: "mongodb",
-            script: "mongod",
-        },
     ],
 };

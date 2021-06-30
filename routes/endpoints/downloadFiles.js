@@ -11,6 +11,30 @@ const JSZip = require("jszip");
 const gfs = require("../../storage/downloader");
 const excel = require("exceljs");
 
+const listKeys = (obj, roots = []) =>
+    Object.keys(obj).reduce(
+        (accum, prop) =>
+            accum.concat(
+                obj[prop].hasOwnProperty("schema")
+                    ? listKeys(obj[prop].schema.paths, roots.concat([prop]))
+                    : roots.concat([prop]).join(".")
+            ),
+        []
+    );
+
+const flatten = (obj, roots = [], sep = ".") =>
+    Object.keys(obj).reduce(
+        (memo, prop) =>
+            Object.assign(
+                {},
+                memo,
+                Object.prototype.toString.call(obj[prop]) === "[object Object]"
+                    ? flatten(obj[prop], roots.concat([prop]))
+                    : { [roots.concat([prop]).join(sep)]: obj[prop] }
+            ),
+        {}
+    );
+
 router.get("/stl/:fileID", auth.optional, async function (req, res) {
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
         var thisFile = submission.files.id(req.params.fileID);
@@ -180,28 +204,83 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
 
 router.get("/export/:dbname", auth.admin, async function (req, res) {
     let dbName = req.params.dbname;
-
+    let workbook, worksheet, columns, allPaths;
     switch (dbName) {
         case "submissions":
-            submissions.find({}).toArray(function (error, result) {
-                let workbook = new excel.Workbook(); //creating workbook
-                let worksheet = workbook.addWorksheet("Submissions"); //creating worksheet
+            let allSubmissions = await submissions.aggregate([
+                {
+                    $unwind: {
+                        path: "$files",
+                    },
+                },
+            ]);
 
-                worksheet.columns = [
-                    { header: "Patron Name", key: "name" },
-                    { header: "Email", key: "email" },
-                    { header: "Phone", key: "phone" },
-                    { header: "Euid", key: "euid" },
-                    { header: "Submission Type", key: "type" },
-                    { header: "Class Code", key: "age" },
-                    { header: "Professor", key: "age" },
-                    { header: "Assignment", key: "age" },
-                    { header: "Department", key: "age" },
-                    { header: "Project", key: "age" },
-                ];
-            });
+            workbook = new excel.Workbook(); //creating workbook
+            worksheet = workbook.addWorksheet("Submissions"); //creating worksheet
+
+            columns = [];
+            allPaths = listKeys(submissions.schema.paths);
+
+            for (let path of allPaths) {
+                columns.push({
+                    header: path,
+                    key: path,
+                });
+            }
+
+            worksheet.columns = columns;
+            for (let item of allSubmissions) {
+                worksheet.addRow(flatten(JSON.parse(JSON.stringify(item))));
+            }
+
+            workbook.xlsx.write(res);
             break;
+        case "attempts":
+            let allAttempts = await attempts.find({});
 
+            workbook = new excel.Workbook(); //creating workbook
+            worksheet = workbook.addWorksheet("Attempts"); //creating worksheet
+
+            columns = [];
+            allPaths = listKeys(attempts.schema.paths);
+
+            for (let path of allPaths) {
+                columns.push({
+                    header: path,
+                    key: path,
+                });
+            }
+
+            worksheet.columns = columns;
+            for (let item of allAttempts) {
+                worksheet.addRow(flatten(JSON.parse(JSON.stringify(item))));
+            }
+
+            workbook.xlsx.write(res);
+            break;
+        case "printers":
+            let allPrinters = await printers.find({});
+
+            workbook = new excel.Workbook(); //creating workbook
+            worksheet = workbook.addWorksheet("Printers"); //creating worksheet
+
+            columns = [];
+            allPaths = listKeys(attempts.schema.paths);
+
+            for (let path of allPaths) {
+                columns.push({
+                    header: path,
+                    key: path,
+                });
+            }
+
+            worksheet.columns = columns;
+            for (let item of allPrinters) {
+                worksheet.addRow(flatten(JSON.parse(JSON.stringify(item))));
+            }
+
+            workbook.xlsx.write(res);
+            break;
         default:
             break;
     }

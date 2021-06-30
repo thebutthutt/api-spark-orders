@@ -2,11 +2,14 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
+const attempts = mongoose.model("Attempt");
+const printers = mongoose.model("Printer");
 const auth = require("../auth");
 const path = require("path");
 const fs = require("fs");
 const JSZip = require("jszip");
 const gfs = require("../../storage/downloader");
+const excel = require("exceljs");
 
 router.get("/stl/:fileID", auth.optional, async function (req, res) {
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
@@ -173,6 +176,35 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
                 console.log("out.zip written.");
             });
     });
+});
+
+router.get("/export/:dbname", auth.admin, async function (req, res) {
+    let dbName = req.params.dbname;
+
+    switch (dbName) {
+        case "submissions":
+            submissions.find({}).toArray(function (error, result) {
+                let workbook = new excel.Workbook(); //creating workbook
+                let worksheet = workbook.addWorksheet("Submissions"); //creating worksheet
+
+                worksheet.columns = [
+                    { header: "Patron Name", key: "name" },
+                    { header: "Email", key: "email" },
+                    { header: "Phone", key: "phone" },
+                    { header: "Euid", key: "euid" },
+                    { header: "Submission Type", key: "type" },
+                    { header: "Class Code", key: "age" },
+                    { header: "Professor", key: "age" },
+                    { header: "Assignment", key: "age" },
+                    { header: "Department", key: "age" },
+                    { header: "Project", key: "age" },
+                ];
+            });
+            break;
+
+        default:
+            break;
+    }
 });
 
 module.exports = router;

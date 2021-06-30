@@ -2,11 +2,38 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
+const attempts = mongoose.model("Attempt");
+const printers = mongoose.model("Printer");
 const auth = require("../auth");
 const path = require("path");
 const fs = require("fs");
 const JSZip = require("jszip");
 const gfs = require("../../storage/downloader");
+const excel = require("exceljs");
+
+const listKeys = (obj, roots = []) =>
+    Object.keys(obj).reduce(
+        (accum, prop) =>
+            accum.concat(
+                obj[prop].hasOwnProperty("schema")
+                    ? listKeys(obj[prop].schema.paths, roots.concat([prop]))
+                    : roots.concat([prop]).join(".")
+            ),
+        []
+    );
+
+const flatten = (obj, roots = [], sep = ".") =>
+    Object.keys(obj).reduce(
+        (memo, prop) =>
+            Object.assign(
+                {},
+                memo,
+                Object.prototype.toString.call(obj[prop]) === "[object Object]"
+                    ? flatten(obj[prop], roots.concat([prop]))
+                    : { [roots.concat([prop]).join(sep)]: obj[prop] }
+            ),
+        {}
+    );
 
 router.get("/stl/:fileID", auth.optional, async function (req, res) {
     submissions.findOne({ "files._id": req.params.fileID }, function (err, submission) {
@@ -173,6 +200,90 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
                 console.log("out.zip written.");
             });
     });
+});
+
+router.get("/export/:dbname", auth.admin, async function (req, res) {
+    let dbName = req.params.dbname;
+    let workbook, worksheet, columns, allPaths;
+    switch (dbName) {
+        case "submissions":
+            let allSubmissions = await submissions.aggregate([
+                {
+                    $unwind: {
+                        path: "$files",
+                    },
+                },
+            ]);
+
+            workbook = new excel.Workbook(); //creating workbook
+            worksheet = workbook.addWorksheet("Submissions"); //creating worksheet
+
+            columns = [];
+            allPaths = listKeys(submissions.schema.paths);
+
+            for (let path of allPaths) {
+                columns.push({
+                    header: path,
+                    key: path,
+                });
+            }
+
+            worksheet.columns = columns;
+            for (let item of allSubmissions) {
+                worksheet.addRow(flatten(JSON.parse(JSON.stringify(item))));
+            }
+
+            workbook.xlsx.write(res);
+            break;
+        case "attempts":
+            let allAttempts = await attempts.find({});
+
+            workbook = new excel.Workbook(); //creating workbook
+            worksheet = workbook.addWorksheet("Attempts"); //creating worksheet
+
+            columns = [];
+            allPaths = listKeys(attempts.schema.paths);
+
+            for (let path of allPaths) {
+                columns.push({
+                    header: path,
+                    key: path,
+                });
+            }
+
+            worksheet.columns = columns;
+            for (let item of allAttempts) {
+                worksheet.addRow(flatten(JSON.parse(JSON.stringify(item))));
+            }
+
+            workbook.xlsx.write(res);
+            break;
+        case "printers":
+            let allPrinters = await printers.find({});
+
+            workbook = new excel.Workbook(); //creating workbook
+            worksheet = workbook.addWorksheet("Printers"); //creating worksheet
+
+            columns = [];
+            allPaths = listKeys(attempts.schema.paths);
+
+            for (let path of allPaths) {
+                columns.push({
+                    header: path,
+                    key: path,
+                });
+            }
+
+            worksheet.columns = columns;
+            for (let item of allPrinters) {
+                worksheet.addRow(flatten(JSON.parse(JSON.stringify(item))));
+            }
+
+            workbook.xlsx.write(res);
+            break;
+        default:
+            break;
+    }
 });
 
 module.exports = router;

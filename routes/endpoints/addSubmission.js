@@ -6,7 +6,7 @@ const upload = require("../../storage/uploader");
 const gfs = require("../../storage/downloader");
 const NodeStl = require("node-stl");
 const emailer = require("../../app/pugmail");
-const logger = require("winston");
+const logger = require("../../app/logger");
 async function calculateVolume(fileID) {
     return new Promise((resolve, reject) => {
         let chunks = [],

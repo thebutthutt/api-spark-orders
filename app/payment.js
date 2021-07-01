@@ -4,7 +4,7 @@ var crypto = require("crypto");
 const emailer = require("./pugmail");
 const account = process.env.PAYMENT_ACCOUNT;
 const secret_key = process.env.PAYMENT_KEY;
-const logger = require("winston");
+const logger = require("../app/logger");
 
 function generateURL(amount, submissionID) {
     var concatString = "";

@@ -8,7 +8,7 @@ const emailer = require("../../app/pugmail");
 const paymentHandler = require("../../app/payment");
 const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
-const logger = require("winston");
+const logger = require("../../app/logger");
 
 // let allSubmissions = submissions.find({}, function (err, res) {
 //     for (var submission of res) {

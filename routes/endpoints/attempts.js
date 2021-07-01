@@ -31,7 +31,7 @@ router.post("/new", auth.required, async function (req, res) {
 
     /* ---------------------------- Create pretty ID ---------------------------- */
     let diffMinutes = Math.round((now - (now.getFullYear(), 0, 1)) / 60000); //how many minutes since the year began
-    let prettyID = printer.name.replace(/\s+/g, "") + "-" + diffMinutes.toString(36).toUpperCase();
+    let prettyID = printer.shortName.replace(/\s+/g, "") + "-" + diffMinutes.toString(36).toUpperCase();
 
     /* --------------------------- create new attempt --------------------------- */
     let newAttempt = new attempts({
@@ -62,7 +62,7 @@ router.post("/new", auth.required, async function (req, res) {
         selectedFile.status = "PRINTING";
         selectedFile.printing.printingLocation = printer.location;
         selectedFile.printing.attemptIDs.push(newAttempt._id);
-        selectedFile.printing.attemptNamess.push(newAttempt.prettyID);
+        selectedFile.printing.attemptNames.push(newAttempt.prettyID);
         await submission.save();
     }
 
@@ -197,6 +197,50 @@ router.post("/complete/:attemptID", auth.required, async function (req, res) {
 
     /* ----------------------------- Save and return ---------------------------- */
     await attempt.save();
+    res.status(200).send("OK");
+});
+
+router.post("/delete/:attemptID", auth.required, async function (req, res) {
+    let attemptID = req.params.attemptID;
+
+    let thisAttempt = await attempts.findById(attemptID);
+
+    try {
+        for await (let fileID of thisAttempt.fileIDs) {
+            let thisSubmission = await submissions.findOne({ "files._id": fileID });
+            let thisFile = thisSubmission.files.id(fileID);
+
+            if (thisAttempt.timestampEnded < new Date("1980")) {
+                thisFile.status == "READY_TO_PRINT";
+            }
+
+            thisFile.printing.attemptIDs = thisFile.printing.attemptIDs.filter(function (e) {
+                return e !== attemptID;
+            });
+
+            thisFile.printing.attemptNames = thisFile.printing.attemptNames.filter(function (e) {
+                return e !== thisAttempt.prettyID;
+            });
+
+            await thisSubmission.save();
+        }
+    } catch (e) {
+        logger.info(e);
+    }
+
+    let attemptPrinter = await printers.findById(thisAttempt.printerID);
+    attemptPrinter.attemptIDs = attemptPrinter.attemptIDs.filter(function (e) {
+        return e !== attemptID;
+    });
+
+    if (thisAttempt.timestampEnded < new Date("1980")) {
+        attemptPrinter.status == "IDLE";
+    }
+
+    await attemptPrinter.save();
+
+    await attempts.deleteOne({ _id: attemptID });
+
     res.status(200).send("OK");
 });
 

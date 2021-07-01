@@ -2,7 +2,7 @@ var schedule = require("node-schedule");
 const moment = require("moment");
 var emailer = require("./emailer.js");
 var printRequestModel = require("./models/printRequest");
-const logger = require("winston");
+const logger = require("../app/logger");
 module.exports = function (constants) {
     /*
 		This finds all the prints waiting for 

@@ -5,7 +5,7 @@ const submissions = mongoose.model("Submission");
 const attempts = mongoose.model("Attempt");
 const printers = mongoose.model("Printer");
 const auth = require("../auth");
-const logger = require("winston");
+const logger = require("../../app/logger");
 const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
 

@@ -10,7 +10,7 @@ const fs = require("fs");
 const JSZip = require("jszip");
 const gfs = require("../../storage/downloader");
 const excel = require("exceljs");
-const logger = require("winston");
+const logger = require("../../app/logger");
 const listKeys = (obj, roots = []) =>
     Object.keys(obj).reduce(
         (accum, prop) =>

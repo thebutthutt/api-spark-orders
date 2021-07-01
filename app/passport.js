@@ -3,7 +3,7 @@ var LocalStrategy = require("passport-local").Strategy;
 const fs = require("fs");
 var path = require("path");
 var ldap = require("ldapjs");
-const logger = require("winston");
+const logger = require("../app/logger");
 // load up the user model
 var User = require("./models/user");
 // expose this function to our app using module.exports

@@ -2,7 +2,7 @@
 // nodemon shutdown please work
 
 require("dotenv").config();
-
+var logger = require("./app/logger");
 // get all the tools we need
 const express = require("express");
 const https = require("https");
@@ -12,7 +12,6 @@ const app = express();
 const cors = require("cors");
 const mongoose = require("mongoose");
 const Grid = require("gridfs-stream");
-var logger = require("./app/logger");
 
 require("./app/models/user.js");
 require("./app/models/printRequest.js");
@@ -34,6 +33,14 @@ process.once("SIGUSR2", function () {
         logger.info("server closed");
         process.kill(process.pid, "SIGUSR2");
     });
+});
+
+process.on("uncaughtException", function (err) {
+    logger.info("Caught exception: " + err);
+});
+
+process.on("unhandledRejection", (reason, p) => {
+    logger.info("Unhandled Rejection:", reason);
 });
 
 // configuration ===============================================================

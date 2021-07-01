@@ -6,6 +6,9 @@ const myFormat = winston.format.combine(
         format: "YYYY.MM.DD HH:mm:ss.SSS",
     }),
     winstonTimestampColorize({ color: "yellow" }),
+    winston.format.splat(),
+    winston.format.json(),
+    winston.format.prettyPrint(),
     winston.format.printf(({ message, timestamp }) => {
         return `[${timestamp}]:  ${message}`;
     })

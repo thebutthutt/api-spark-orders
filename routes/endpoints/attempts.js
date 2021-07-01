@@ -1,3 +1,4 @@
+const logger = require("../../app/logger");
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
@@ -5,7 +6,7 @@ const attempts = mongoose.model("Attempt");
 const printers = mongoose.model("Printer");
 const submissions = mongoose.model("Submission");
 const auth = require("../auth");
-const logger = require("winston");
+
 // attempts.find({}, function (err, all) {
 //     all.forEach(function (attempt) {
 //         printers.findOne({ _id: attempt.printerID }, function (err, res) {
@@ -73,8 +74,6 @@ router.get("/:attemptID", auth.required, async function (req, res) {
     let attempt = await attempts.findById(req.params.attemptID);
     res.status(200).json(attempt);
 });
-
-router.post("/update/:attemptID", auth.required, async function (req, res) {});
 
 /* -------------------------------------------------------------------------- */
 /*                          Complete Printing Atempt                          */
@@ -199,6 +198,48 @@ router.post("/complete/:attemptID", auth.required, async function (req, res) {
     /* ----------------------------- Save and return ---------------------------- */
     await attempt.save();
     res.status(200).send("OK");
+});
+
+/* -------------------------------------------------------------------------- */
+/*                               Filter attempts                              */
+/* -------------------------------------------------------------------------- */
+router.post("/filter", auth.required, async function (req, res) {
+    let results = await attempts.aggregate([
+        {
+            $lookup: {
+                from: "submissions",
+                localField: "fileIDs",
+                foreignField: "files._id",
+                as: "submissions",
+            },
+        },
+        {
+            $set: {
+                submissions: {
+                    $map: {
+                        input: "$submissions",
+                        as: "submission",
+                        in: {
+                            $mergeObjects: [
+                                "$$submission",
+                                {
+                                    files: {
+                                        $filter: {
+                                            input: "$$submission.files",
+                                            as: "file",
+                                            cond: { $in: ["$$file._id", "$fileIDs"] },
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+            },
+        },
+    ]);
+
+    res.status(200).json(results);
 });
 
 module.exports = router;

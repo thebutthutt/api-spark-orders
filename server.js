@@ -12,6 +12,7 @@ const app = express();
 const cors = require("cors");
 const mongoose = require("mongoose");
 const Grid = require("gridfs-stream");
+var logger = require("./app/logger");
 
 require("./app/models/user.js");
 require("./app/models/printRequest.js");
@@ -28,9 +29,9 @@ let server;
 require("./app/pugmail");
 
 process.once("SIGUSR2", function () {
-    console.log("closing");
+    logger.info("closing");
     server.close(() => {
-        console.log("server closed");
+        logger.info("server closed");
         process.kill(process.pid, "SIGUSR2");
     });
 });
@@ -97,7 +98,7 @@ mongoose
                 app
             )
             .listen(process.env.PORT, function () {
-                console.log("Example app listening on port", process.env.PORT);
+                logger.info("Example app listening on port", process.env.PORT);
             });
 
         //sets up the websocket for signature pads

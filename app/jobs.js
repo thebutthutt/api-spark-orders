@@ -2,7 +2,7 @@ var schedule = require("node-schedule");
 const moment = require("moment");
 var emailer = require("./emailer.js");
 var printRequestModel = require("./models/printRequest");
-
+const logger = require("winston");
 module.exports = function (constants) {
     /*
 		This finds all the prints waiting for 
@@ -35,7 +35,7 @@ module.exports = function (constants) {
             },
             function (err, result) {
                 if (err) {
-                    console.log(err);
+                    logger.info(err);
                 } else {
                     result.forEach((submission) => {
                         var three = [],
@@ -70,17 +70,17 @@ module.exports = function (constants) {
                         submission.save();
 
                         if (three.length > 0) {
-                            console.log("Repo prints", three);
+                            logger.info("Repo prints", three);
                             emailer.repoPrint(submission, three);
                         }
 
                         if (two.length > 0) {
-                            console.log("final warning prints", two);
+                            logger.info("final warning prints", two);
                             emailer.finalWarning(submission, two);
                         }
 
                         if (one.length > 0) {
-                            console.log("warning prints", one);
+                            logger.info("warning prints", one);
                             emailer.stillWaiting(submission, one);
                         }
                     });
@@ -97,7 +97,7 @@ module.exports = function (constants) {
         });
 
         for (var submission of stale) {
-            //console.log(submission);
+            //logger.info(submission);
             for (var file of submission.files) {
                 var reviewed = new Date(file.dateReviewed);
                 if (reviewed <= twoWeeksAgo) {

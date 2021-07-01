@@ -5,14 +5,14 @@ const attempts = mongoose.model("Attempt");
 const printers = mongoose.model("Printer");
 const submissions = mongoose.model("Submission");
 const auth = require("../auth");
-
+const logger = require("winston");
 // attempts.find({}, function (err, all) {
 //     all.forEach(function (attempt) {
 //         printers.findOne({ _id: attempt.printerID }, function (err, res) {
-//             console.log(attempt);
+//             logger.info(attempt);
 //             let now = attempt.timestampStarted;
 //             let diffMinutes = Math.round((now - (now.getFullYear(), 0, 1)) / 60000); //how many minutes since the year began
-//             console.log(attempt.printerName, attempt.printerID, res._id);
+//             logger.info(attempt.printerName, attempt.printerID, res._id);
 //             let prettyID = res.shortName.replace(/\s+/g, "") + "-" + diffMinutes.toString(36).toUpperCase();
 //             attempt.prettyID = prettyID;
 //             attempt.save();
@@ -82,14 +82,14 @@ router.post("/update/:attemptID", auth.required, async function (req, res) {});
 router.post("/complete/:attemptID", auth.required, async function (req, res) {
     let now = new Date();
 
-    console.log(req.params.attemptID);
-    console.log(req.body);
+    logger.info(req.params.attemptID);
+    logger.info(req.body);
 
     let endWeight = req.body.finalWeight;
     let wasSuccess = req.body.wasSuccess;
 
     let attempt = await attempts.findById(req.params.attemptID);
-    console.log(attempt);
+    logger.info(attempt);
 
     /* --------------------------- Update attempt info -------------------------- */
     attempt.timestampEnded = now;

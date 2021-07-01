@@ -8,6 +8,7 @@ const emailer = require("../../app/pugmail");
 const paymentHandler = require("../../app/payment");
 const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
+const logger = require("winston");
 
 // let allSubmissions = submissions.find({}, function (err, res) {
 //     for (var submission of res) {
@@ -50,7 +51,7 @@ const uploader = require("../../storage/uploader");
 //             file.fileName = file.originalFileName;
 //             file.originalFileName = backupName;
 
-//             console.log(file.fileName);
+//             logger.info(file.fileName);
 //         }
 //         submission.save();
 //     }
@@ -81,7 +82,7 @@ router.post("/review/:fileID", uploader.any(), auth.required, async function (re
     //remove old gcode if exist
     gfs.delete(selectedFile.gcodeID, (err) => {
         if (err) {
-            console.log("Error deleting gcode, but this is fine");
+            logger.info("Error deleting gcode, but this is fine");
         }
     });
 
@@ -111,7 +112,7 @@ router.post("/review/:fileID", uploader.any(), auth.required, async function (re
         if (file.copyGroupID == selectedFile.copyGroupID) {
             return allReviewed && true;
         } else {
-            console.log(allReviewed && file.status == "REVIEWED");
+            logger.info(allReviewed && file.status == "REVIEWED");
             return allReviewed && file.status == "REVIEWED";
         }
     }, true);
@@ -340,13 +341,13 @@ router.post("/delete/file/:fileID", auth.required, async function (req, res) {
 
         gfs.delete(thisFile.stlID, (err) => {
             if (err) {
-                console.log("Error deleting stl, but this is fine");
+                logger.info("Error deleting stl, but this is fine");
             }
         });
 
         gfs.delete(thisFile.gcodeID, (err) => {
             if (err) {
-                console.log("Error deleting gcode, but this is fine");
+                logger.info("Error deleting gcode, but this is fine");
             }
         });
 

@@ -6,6 +6,7 @@ const upload = require("../../storage/uploader");
 const gfs = require("../../storage/downloader");
 const NodeStl = require("node-stl");
 const emailer = require("../../app/pugmail");
+const logger = require("../../app/logger");
 async function calculateVolume(fileID) {
     return new Promise((resolve, reject) => {
         let chunks = [],
@@ -27,7 +28,7 @@ async function calculateVolume(fileID) {
                 calcVolume = stl.volume.toFixed(2);
                 resolve(calcVolume);
             } catch (error) {
-                console.log(error);
+                logger.info(error);
                 reject(error);
             }
         });
@@ -38,7 +39,7 @@ router.post("/", upload.any(), async function (req, res) {
     var now = new Date();
     var jsonData = JSON.parse(req.body.jsonData);
 
-    console.log(req.files);
+    logger.info(req.files);
 
     let pickupLocation = jsonData.pickupLocation;
 
@@ -78,7 +79,7 @@ router.post("/", upload.any(), async function (req, res) {
             return x.fieldname == "thumb-" + file.copyGroupID;
         });
 
-        console.log(uploadedThumbnail);
+        logger.info(uploadedThumbnail);
 
         let volume = await calculateVolume(uploadedFile.id);
         var tempFile = {

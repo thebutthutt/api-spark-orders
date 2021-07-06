@@ -12,4 +12,8 @@ router.use("/printers", require("./endpoints/printers"));
 router.use("/payment", require("./endpoints/payment"));
 router.use("/pickup", require("./endpoints/pickup"));
 
+router.get("/testerror", function (req, res) {
+    res.status(404).send("You asked for it");
+});
+
 module.exports = router;

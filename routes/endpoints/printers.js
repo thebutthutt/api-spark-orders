@@ -5,6 +5,7 @@ const submissions = mongoose.model("Submission");
 const attempts = mongoose.model("Attempt");
 const printers = mongoose.model("Printer");
 const auth = require("../auth");
+const logger = require("../../app/logger");
 const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
 
@@ -91,9 +92,9 @@ router.post("/update/:printerID", uploader.any(), auth.required, async function 
         let imageFile = req.files[0];
 
         if (printer.imageID) {
-            console.log("deleting");
+            logger.info("deleting");
             gfs.delete(printer.imageID, (err) => {
-                console.log("err delete printer image");
+                logger.info("err delete printer image");
             });
         }
 
@@ -108,9 +109,9 @@ router.post("/update/:printerID", uploader.any(), auth.required, async function 
 router.post("/delete/:printerID", auth.admin, async function (req, res) {
     let printer = await printers.findById(req.params.printerID);
     if (printer.imageID) {
-        console.log("deleting");
+        logger.info("deleting");
         gfs.delete(printer.imageID, (err) => {
-            console.log("err delete printer image");
+            logger.info("err delete printer image");
         });
     }
     await printers.deleteOne({ _id: req.params.printerID });

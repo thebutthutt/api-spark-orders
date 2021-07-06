@@ -2,7 +2,7 @@
 // nodemon shutdown please work
 
 require("dotenv").config();
-
+var logger = require("./app/logger");
 // get all the tools we need
 const express = require("express");
 const https = require("https");
@@ -28,11 +28,19 @@ let server;
 require("./app/pugmail");
 
 process.once("SIGUSR2", function () {
-    console.log("closing");
+    logger.info("closing");
     server.close(() => {
-        console.log("server closed");
+        logger.info("server closed");
         process.kill(process.pid, "SIGUSR2");
     });
+});
+
+process.on("uncaughtException", function (err) {
+    logger.info("Caught exception: " + err);
+});
+
+process.on("unhandledRejection", (reason, p) => {
+    logger.info("Unhandled Rejection:", reason);
 });
 
 // configuration ===============================================================
@@ -97,7 +105,7 @@ mongoose
                 app
             )
             .listen(process.env.PORT, function () {
-                console.log("Example app listening on port", process.env.PORT);
+                logger.info("Example app listening on port", process.env.PORT);
             });
 
         //sets up the websocket for signature pads

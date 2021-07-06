@@ -6,7 +6,7 @@ var nodemailer = require("nodemailer");
 const mongoose = require("mongoose");
 const submissions = mongoose.model("Submission");
 const path = require("path");
-
+const logger = require("../app/logger");
 var smtpserver = "mailhost.unt.edu";
 var sender = '"SparkOrders" <no-reply.sparkorders@unt.edu>';
 var portNum = 25;
@@ -102,7 +102,7 @@ module.exports = {
                     fileNames: fileNames,
                 },
             })
-            .then(console.log("sent new submission email to", recipient))
+            .then(logger.info("sent new submission email to", recipient))
             .catch(console.error);
     },
     allApproved: function (submission, amount, url) {
@@ -130,7 +130,7 @@ module.exports = {
                     url: url,
                 },
             })
-            .then(console.log("sent all approved email to", recipient))
+            .then(logger.info("sent all approved email to", recipient))
             .catch(console.error);
     },
     someApproved: function (submission, amount, url) {
@@ -160,8 +160,8 @@ module.exports = {
             return result;
         }, []);
 
-        console.log(acceptedFiles);
-        console.log(rejectedFiles);
+        logger.info(acceptedFiles);
+        logger.info(rejectedFiles);
 
         email
             .send({
@@ -177,7 +177,7 @@ module.exports = {
                     url: url,
                 },
             })
-            .then(console.log("sent some approved email to", recipient))
+            .then(logger.info("sent some approved email to", recipient))
             .catch(console.error);
     },
     allRejected: function (submission) {
@@ -202,7 +202,7 @@ module.exports = {
                     allFiles: inputData,
                 },
             })
-            .then(console.log("sent all rejected email to", recipient))
+            .then(logger.info("sent all rejected email to", recipient))
             .catch(console.error);
     },
     modificationRequired: function (submission) {},
@@ -225,7 +225,7 @@ module.exports = {
                     fileNames: fileNames,
                 },
             })
-            .then(console.log("sent payment waived email to", recipient))
+            .then(logger.info("sent payment waived email to", recipient))
             .catch(console.error);
     },
     inTransit: function (submission, readyFile) {

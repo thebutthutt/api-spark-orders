@@ -10,7 +10,7 @@ const fs = require("fs");
 const JSZip = require("jszip");
 const gfs = require("../../storage/downloader");
 const excel = require("exceljs");
-
+const logger = require("../../app/logger");
 const listKeys = (obj, roots = []) =>
     Object.keys(obj).reduce(
         (accum, prop) =>
@@ -119,7 +119,7 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
                         stream.once("end", () => {
                             fileBuffer = Buffer.concat(chunks);
                             zip.file(file.fileName, fileBuffer);
-                            console.log("finished");
+                            logger.info("finished");
                             resolve();
                         });
                     } else {
@@ -140,7 +140,7 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
                         readStream.once("end", () => {
                             fileBuffer = Buffer.concat(chunks);
                             zip.file(file.fileName, fileBuffer);
-                            console.log("finished");
+                            logger.info("finished");
                             resolve();
                         });
                     }
@@ -161,7 +161,7 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
                         stream.once("end", () => {
                             fileBuffer = Buffer.concat(chunks);
                             zip.file(file.gcodeName, fileBuffer);
-                            console.log("finished");
+                            logger.info("finished");
                             resolve();
                         });
                     } else {
@@ -182,7 +182,7 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
                         readStream.once("end", () => {
                             fileBuffer = Buffer.concat(chunks);
                             zip.file(file.review.gcodeName, fileBuffer);
-                            console.log("finished");
+                            logger.info("finished");
                             resolve();
                         });
                     }
@@ -197,7 +197,7 @@ router.get("/zip/:submissionID", auth.required, async function (req, res) {
             .on("finish", function () {
                 // JSZip generates a readable stream with a "end" event,
                 // but is piped here in a writable stream which emits a "finish" event.
-                console.log("out.zip written.");
+                logger.info("out.zip written.");
             });
     });
 });

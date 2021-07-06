@@ -4,15 +4,16 @@ var crypto = require("crypto");
 const emailer = require("./pugmail");
 const account = process.env.PAYMENT_ACCOUNT;
 const secret_key = process.env.PAYMENT_KEY;
+const logger = require("../app/logger");
 
 function generateURL(amount, submissionID) {
     var concatString = "";
     var newURL = new URL(base_url);
     concatString = concatString.concat(account, amount, submissionID, secret_key);
-    console.log("generated concat", concatString);
+    logger.info("generated concat", concatString);
 
     var otherHash = crypto.createHash("md5").update(concatString).digest("hex");
-    console.log("generated hash", otherHash);
+    logger.info("generated hash", otherHash);
 
     newURL.searchParams.append("account", account);
     newURL.searchParams.append("amount", amount);
@@ -104,7 +105,7 @@ module.exports = {
             if (innerMatch == true && outerMatch == true) {
                 callback(true, submissionID);
             } else {
-                console.log("Hashes invalid");
+                logger.info("Hashes invalid");
                 callback(false, submissionID);
             }
         });

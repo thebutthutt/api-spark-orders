@@ -1,3 +1,4 @@
+const logger = require("../../app/logger");
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
@@ -9,10 +10,10 @@ const auth = require("../auth");
 // attempts.find({}, function (err, all) {
 //     all.forEach(function (attempt) {
 //         printers.findOne({ _id: attempt.printerID }, function (err, res) {
-//             console.log(attempt);
+//             logger.info(attempt);
 //             let now = attempt.timestampStarted;
 //             let diffMinutes = Math.round((now - (now.getFullYear(), 0, 1)) / 60000); //how many minutes since the year began
-//             console.log(attempt.printerName, attempt.printerID, res._id);
+//             logger.info(attempt.printerName, attempt.printerID, res._id);
 //             let prettyID = res.shortName.replace(/\s+/g, "") + "-" + diffMinutes.toString(36).toUpperCase();
 //             attempt.prettyID = prettyID;
 //             attempt.save();
@@ -30,7 +31,7 @@ router.post("/new", auth.required, async function (req, res) {
 
     /* ---------------------------- Create pretty ID ---------------------------- */
     let diffMinutes = Math.round((now - (now.getFullYear(), 0, 1)) / 60000); //how many minutes since the year began
-    let prettyID = printer.name.replace(/\s+/g, "") + "-" + diffMinutes.toString(36).toUpperCase();
+    let prettyID = printer.shortName.replace(/\s+/g, "") + "-" + diffMinutes.toString(36).toUpperCase();
 
     /* --------------------------- create new attempt --------------------------- */
     let newAttempt = new attempts({
@@ -61,7 +62,7 @@ router.post("/new", auth.required, async function (req, res) {
         selectedFile.status = "PRINTING";
         selectedFile.printing.printingLocation = printer.location;
         selectedFile.printing.attemptIDs.push(newAttempt._id);
-        selectedFile.printing.attemptNamess.push(newAttempt.prettyID);
+        selectedFile.printing.attemptNames.push(newAttempt.prettyID);
         await submission.save();
     }
 
@@ -74,22 +75,20 @@ router.get("/:attemptID", auth.required, async function (req, res) {
     res.status(200).json(attempt);
 });
 
-router.post("/update/:attemptID", auth.required, async function (req, res) {});
-
 /* -------------------------------------------------------------------------- */
 /*                          Complete Printing Atempt                          */
 /* -------------------------------------------------------------------------- */
 router.post("/complete/:attemptID", auth.required, async function (req, res) {
     let now = new Date();
 
-    console.log(req.params.attemptID);
-    console.log(req.body);
+    logger.info(req.params.attemptID);
+    logger.info(req.body);
 
     let endWeight = req.body.finalWeight;
     let wasSuccess = req.body.wasSuccess;
 
     let attempt = await attempts.findById(req.params.attemptID);
-    console.log(attempt);
+    logger.info(attempt);
 
     /* --------------------------- Update attempt info -------------------------- */
     attempt.timestampEnded = now;
@@ -199,6 +198,92 @@ router.post("/complete/:attemptID", auth.required, async function (req, res) {
     /* ----------------------------- Save and return ---------------------------- */
     await attempt.save();
     res.status(200).send("OK");
+});
+
+router.post("/delete/:attemptID", auth.required, async function (req, res) {
+    let attemptID = req.params.attemptID;
+
+    let thisAttempt = await attempts.findById(attemptID);
+
+    try {
+        for await (let fileID of thisAttempt.fileIDs) {
+            let thisSubmission = await submissions.findOne({ "files._id": fileID });
+            let thisFile = thisSubmission.files.id(fileID);
+
+            if (thisAttempt.timestampEnded < new Date("1980")) {
+                thisFile.status == "READY_TO_PRINT";
+            }
+
+            thisFile.printing.attemptIDs = thisFile.printing.attemptIDs.filter(function (e) {
+                return e !== attemptID;
+            });
+
+            thisFile.printing.attemptNames = thisFile.printing.attemptNames.filter(function (e) {
+                return e !== thisAttempt.prettyID;
+            });
+
+            await thisSubmission.save();
+        }
+    } catch (e) {
+        logger.info(e);
+    }
+
+    let attemptPrinter = await printers.findById(thisAttempt.printerID);
+    attemptPrinter.attemptIDs = attemptPrinter.attemptIDs.filter(function (e) {
+        return e !== attemptID;
+    });
+
+    if (thisAttempt.timestampEnded < new Date("1980")) {
+        attemptPrinter.status == "IDLE";
+    }
+
+    await attemptPrinter.save();
+
+    await attempts.deleteOne({ _id: attemptID });
+
+    res.status(200).send("OK");
+});
+
+/* -------------------------------------------------------------------------- */
+/*                               Filter attempts                              */
+/* -------------------------------------------------------------------------- */
+router.post("/filter", auth.required, async function (req, res) {
+    let results = await attempts.aggregate([
+        {
+            $lookup: {
+                from: "submissions",
+                localField: "fileIDs",
+                foreignField: "files._id",
+                as: "submissions",
+            },
+        },
+        {
+            $set: {
+                submissions: {
+                    $map: {
+                        input: "$submissions",
+                        as: "submission",
+                        in: {
+                            $mergeObjects: [
+                                "$$submission",
+                                {
+                                    files: {
+                                        $filter: {
+                                            input: "$$submission.files",
+                                            as: "file",
+                                            cond: { $in: ["$$file._id", "$fileIDs"] },
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+            },
+        },
+    ]);
+
+    res.status(200).json(results);
 });
 
 module.exports = router;

@@ -27,4 +27,4 @@ If you run without sudo it will work, but it won't show you the server processes
 -   `mongod` The database process
 
 `spark-react`: `ecosystem.config.js`
-`mongod`: `mongod.config.js`
+`mongod`: `mongod.config.js` please

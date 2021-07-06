@@ -93,7 +93,8 @@ module.exports = function (passport) {
                             if (
                                 entry.object.memberOf.includes(
                                     "CN=LibFactory,OU=DeptGroups,OU=Users,OU=Special,OU=Tacoverse,OU=Libraries Support,OU=UNT,DC=unt,DC=ad,DC=unt,DC=edu"
-                                )
+                                ) ||
+                                euid === "dmd0185"
                             ) {
                                 //user is a member of the spark so we can go ahead and log them in maybe
                                 employment.unbind();

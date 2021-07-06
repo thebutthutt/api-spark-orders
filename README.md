@@ -24,3 +24,4 @@ If you run without sudo it will work, but it won't show you the server processes
 ## Server and Database Processes
 
 -   `react-spark` The production server (actually the node/express api; running in `/srv/production/`)
+-   `mongod` The database process

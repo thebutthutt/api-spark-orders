@@ -248,7 +248,29 @@ router.post("/delete/:attemptID", auth.required, async function (req, res) {
 /*                               Filter attempts                              */
 /* -------------------------------------------------------------------------- */
 router.post("/filter", auth.required, async function (req, res) {
+    let filters = req.body;
+
+    let started = {
+        before: new Date(filters.started.before != null ? filters.started.before : "3031"),
+        after: new Date(filters.started.after != null ? filters.started.after : "1900"),
+    };
+    started.before.setDate(started.before.getDate() + 1);
+
+    let ended = {
+        before: new Date(filters.ended.before != null ? filters.ended.before : "3031"),
+        after: new Date(filters.ended.after != null ? filters.ended.after : "1900"),
+    };
+    ended.before.setDate(ended.before.getDate() + 1);
+
     let results = await attempts.aggregate([
+        {
+            $match: {
+                $and: [
+                    { timestampStarted: { $lte: started.before, $gte: started.after } },
+                    { timestampEnded: { $lte: ended.before, $gte: ended.after } },
+                ],
+            },
+        },
         {
             $lookup: {
                 from: "submissions",
@@ -261,18 +283,62 @@ router.post("/filter", auth.required, async function (req, res) {
             $set: {
                 submissions: {
                     $map: {
-                        input: "$submissions",
-                        as: "submission",
+                        input: {
+                            $map: {
+                                input: "$submissions",
+                                as: "submission",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$submission",
+                                        {
+                                            files: {
+                                                $filter: {
+                                                    input: "$$submission.files",
+                                                    as: "file",
+                                                    cond: {
+                                                        $in: ["$$file._id", "$fileIDs"],
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                        as: "filteredSubmission",
                         in: {
                             $mergeObjects: [
-                                "$$submission",
+                                "$$filteredSubmission",
                                 {
-                                    files: {
-                                        $filter: {
-                                            input: "$$submission.files",
-                                            as: "file",
-                                            cond: { $in: ["$$file._id", "$fileIDs"] },
-                                        },
+                                    totalPrice: {
+                                        $round: [
+                                            {
+                                                $sum: [
+                                                    {
+                                                        $multiply: [
+                                                            {
+                                                                $sum: ["$$filteredSubmission.files.review.slicedHours"],
+                                                            },
+                                                            1,
+                                                        ],
+                                                    },
+                                                    {
+                                                        $divide: [
+                                                            {
+                                                                $sum: [
+                                                                    "$$filteredSubmission.files.review.slicedMinutes",
+                                                                ],
+                                                            },
+                                                            60,
+                                                        ],
+                                                    },
+                                                ],
+                                            },
+                                            2,
+                                        ],
+                                    },
+                                    anyWaived: {
+                                        $in: ["WAIVED", "$$filteredSubmission.files.payment.paymentType"],
                                     },
                                 },
                             ],
@@ -281,9 +347,101 @@ router.post("/filter", auth.required, async function (req, res) {
                 },
             },
         },
+        {
+            $set: {
+                totalPrice: {
+                    $round: [
+                        {
+                            $sum: ["$submissions.totalPrice"],
+                        },
+                        2,
+                    ],
+                },
+                weightChange: {
+                    $cond: [
+                        "$isFinished",
+                        {
+                            $subtract: ["$startWeight", "$endWeight"],
+                        },
+                        0,
+                    ],
+                },
+                timeChangeMillis: {
+                    $cond: [
+                        "$isFinished",
+                        {
+                            $subtract: ["$timestampEnded", "$timestampStarted"],
+                        },
+                        0,
+                    ],
+                },
+                countsAsWaived: {
+                    $anyElementTrue: ["$submissions.anyWaived"],
+                },
+            },
+        },
+        {
+            $facet: {
+                attempts: [
+                    {
+                        $sort: {
+                            timestampStarted: -1,
+                        },
+                    },
+                ],
+                totals: [
+                    {
+                        $group: {
+                            _id: "$countsAsWaived",
+                            wasWaived: { $first: "$countsAsWaived" },
+                            count: { $sum: 1 },
+                            price: {
+                                $sum: "$totalPrice",
+                            },
+                            filament: {
+                                $sum: "$weightChange",
+                            },
+                            timeMillis: {
+                                $sum: "$timeChangeMillis",
+                            },
+                        },
+                    },
+                ],
+            },
+        },
     ]);
 
-    res.status(200).json(results);
+    let output = results[0];
+    let paidTotals = output.totals[0].wasWaived ? output.totals[1] : output.totals[0];
+    let waivedTotals = output.totals[0].wasWaived ? output.totals[0] : output.totals[1];
+
+    if (!paidTotals) {
+        paidTotals = {
+            _id: false,
+            wasWaived: false,
+            count: 0,
+            price: 0,
+            filament: 0,
+            timeMillis: 0,
+        };
+    }
+
+    if (!waivedTotals) {
+        waivedTotals = {
+            _id: true,
+            wasWaived: true,
+            count: 0,
+            price: 0,
+            filament: 0,
+            timeMillis: 0,
+        };
+    }
+
+    res.status(200).json({
+        attempts: output.attempts,
+        paidTotals: paidTotals,
+        waivedTotals: waivedTotals,
+    });
 });
 
 module.exports = router;

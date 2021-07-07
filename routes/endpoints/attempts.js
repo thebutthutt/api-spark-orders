@@ -348,6 +348,11 @@ router.post("/filter", auth.required, async function (req, res) {
             },
         },
         {
+            $match: {
+                submissions: { $elemMatch: { _id: { $exists: true } } },
+            },
+        },
+        {
             $set: {
                 totalPrice: {
                     $round: [

@@ -214,23 +214,12 @@ var printSubmissionSchema = mongoose.Schema({
     },
 
     emails: {
-        sentReviewed: { type: Boolean, default: false },
-        timestampReviewed: { type: Date, default: "1970" },
-
-        sentPaymentThankYou: { type: Boolean, default: false },
-        timestampPaymentThankYou: { type: Date, default: "1970" },
-
-        sentPickup: { type: Boolean, default: false },
-        timestampPickup: { type: Date, default: "1970" },
-
-        sentFirstWarning: { type: Boolean, default: false },
-        timestampFirstWarning: { type: Date, default: "1970" },
-
-        sentFinalWarning: { type: Boolean, default: false },
-        timestampFinalWarning: { type: Date, default: "1970" },
-
-        sentReposessed: { type: Boolean, default: false },
-        timestampReposessed: { type: Date, default: "1970" },
+        type: [
+            {
+                templateName: { type: String, default: "" },
+                timestampSent: { type: Date, default: "1970" },
+            },
+        ],
     },
 });
 

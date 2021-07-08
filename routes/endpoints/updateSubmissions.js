@@ -10,63 +10,39 @@ const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
 const logger = require("../../app/logger");
 
-// let allSubmissions = submissions.find({}, function (err, res) {
-//     for (var submission of res) {
-//         let finalPaymentAmount = 0.0;
-//         let acceptedFiles = [];
-//         let rejectedFiles = [];
+let allSubmissions = submissions.find({}, function (err, res) {
+    for (let submission of res) {
+        submission.emails = [
+            {
+                templateName: "submissionRecieved",
+                timestampSent: submission.submissionDetails.timestampSubmitted,
+            },
+        ];
 
-//         for (var file of submission.files) {
-//             if (file.review.descision == "Accepted") {
-//                 let thisPrice = Math.max(file.review.slicedHours + file.review.slicedMinutes / 60, 1);
-//                 finalPaymentAmount += thisPrice;
-//                 acceptedFiles.push({
-//                     filename: file.fileName,
-//                     notes: file.review.patronNotes,
-//                     price: thisPrice.toFixed(2),
-//                 });
-//             } else {
-//                 rejectedFiles.push({
-//                     filename: file.fileName,
-//                     notes: file.review.patronNotes,
-//                 });
-//             }
+        if (submission.paymentRequest.timestampPaymentRequested > new Date("1980")) {
+            submission.emails.push({
+                templateName: "submissionReviewed",
+                timestampSent: submission.paymentRequest.timestampPaymentRequested,
+            });
+        }
 
-//             if (file.review.internalNotes.length > 0) {
-//                 file.review.reviewedByName = file.review.internalNotes[0].techName;
-//                 file.review.reviewedByEUID = file.review.internalNotes[0].techEUID;
-//             }
-//         }
-//         finalPaymentAmount = finalPaymentAmount.toFixed(2);
-//         submission.requestedPrice = finalPaymentAmount;
+        if (submission.payment.timestampPaid > new Date("1980")) {
+            submission.emails.push({
+                templateName: submission.payment.paymentType == "PAID" ? "paymentRecieved" : "paymentWaived",
+                timestampSent: submission.payment.timestampPaid,
+            });
+        }
 
-//         submission.save();
-//     }
-// });
+        if (submission.pickup.timestampPickupRequested > new Date("1980")) {
+            submission.emails.push({
+                templateName: "readyForPickup",
+                timestampSent: submission.pickup.timestampPickupRequested,
+            });
+        }
 
-// let allSubmissions = submissions.find({}, function (err, res) {
-//     for (let submission of res) {
-//         for (let file of submission.files) {
-//             let backupName = file.fileName;
-//             file.fileName = file.originalFileName;
-//             file.originalFileName = backupName;
-
-//             logger.info(file.fileName);
-//         }
-//         submission.save();
-//     }
-// });
-
-// let allSubmissions = submissions.find({}, function (err, res) {
-//     for (let submission of res) {
-//         for (let file of submission.files) {
-//             if (file.status == "STALE_ON_PICKUP") {
-//                 file.status = "REPOSESSED";
-//             }
-//         }
-//         submission.save();
-//     }
-// });
+        submission.save();
+    }
+});
 
 /* -------------------------------------------------------------------------- */
 /*                               Review One File                              */

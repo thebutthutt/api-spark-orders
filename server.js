@@ -16,12 +16,10 @@ const Grid = require("gridfs-stream");
 require("./app/models/user.js");
 require("./app/models/printRequest.js");
 require("./app/models/printer.js");
-require("./app/models/selfServiceLog");
 require("./app/models/attempt");
 require("./app/models/customEmail");
 
 const path = require("path");
-const favicon = require("serve-favicon");
 
 let server;
 
@@ -121,5 +119,3 @@ mongoose
             res.end();
         }).listen(process.env.HTTP, "0.0.0.0");
     }); // connect to our database
-
-//emailer.newSubmission();

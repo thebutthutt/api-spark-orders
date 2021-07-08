@@ -1,6 +1,6 @@
 var schedule = require("node-schedule");
 const moment = require("moment");
-var emailer = require("./emailer.js");
+var emailer = require("./pugmail");
 var printRequestModel = require("./models/printRequest");
 const logger = require("../app/logger");
 module.exports = function (constants) {

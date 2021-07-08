@@ -2,6 +2,7 @@ const Email = require("email-templates");
 var nodemailer = require("nodemailer");
 const path = require("path");
 const mongoose = require("mongoose");
+const submissions = mongoose.model("Submission");
 const emails = mongoose.model("Email");
 var smtpserver = "mailhost.unt.edu";
 var sender = '"SparkOrders" <no-reply.sparkorders@unt.edu>';
@@ -20,6 +21,7 @@ const email = new Email({
     message: {
         from: sender,
     },
+    preview: false,
     send: true,
     transport: transporter,
     views: {
@@ -54,6 +56,14 @@ module.exports = {
                     submission: submission,
                     detailLink: "http://sparkorders.library.unt.edu/submission/" + submission._id,
                 },
+            })
+            .then(async () => {
+                submission.emails.push({
+                    templateName: templateName,
+                    timestampSent: new Date(),
+                });
+
+                await submission.save();
             })
             .catch(console.error);
     },

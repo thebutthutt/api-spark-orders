@@ -1,6 +1,5 @@
 const base_url = "https://payments.library.unt.edu/payment/";
 var crypto = require("crypto");
-//var newmailer = require("./emailer.js");
 const emailer = require("./pugmail");
 const account = process.env.PAYMENT_ACCOUNT;
 const secret_key = process.env.PAYMENT_KEY;

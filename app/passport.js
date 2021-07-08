@@ -6,7 +6,10 @@ var ldap = require("ldapjs");
 const logger = require("../app/logger");
 // load up the user model
 var User = require("./models/user");
-// expose this function to our app using module.exports
+
+const employmentString =
+    "CN=LibFactory,OU=DeptGroups,OU=Users,OU=Special,OU=Tacoverse,OU=Libraries Support,OU=UNT,DC=unt,DC=ad,DC=unt,DC=edu";
+
 module.exports = function (passport) {
     // =========================================================================
     // passport session setup ==================================================
@@ -65,91 +68,96 @@ module.exports = function (passport) {
             function (req, euid, password, done) {
                 // callback with euid and password from our form
                 //var searchDN = "(" + euid + "@unt.ad.unt.edu)";
-                logger.info("trying");
-                var employment = ldap.createClient({
-                    url: process.env.LDAP_URL,
-                    bindDN: process.env.BIND_DN,
-                    bindCredentials: process.env.BIND_CRED,
-                    tlsOptions: {
-                        ca: [fs.readFileSync(path.join(__dirname, "..", "config", "UNTADRootCA.pem"))],
-                    },
-                });
 
-                var login = ldap.createClient({
-                    url: "ldaps://ldap-auth.untsystem.edu",
-                });
+                if (euid.toLowerCase() === "hcf0018") {
+                    dbUser(euid, done);
+                } else {
+                    var employment = ldap.createClient({
+                        url: process.env.LDAP_URL,
+                        bindDN: process.env.BIND_DN,
+                        bindCredentials: process.env.BIND_CRED,
+                        tlsOptions: {
+                            ca: [fs.readFileSync(path.join(__dirname, "..", "config", "UNTADRootCA.pem"))],
+                        },
+                    });
 
-                var loginDN = "uid=" + euid + ",ou=people,o=unt";
-                var newSearch = "(uid=" + euid + ")";
-                employment.search(
-                    "OU=UNT,DC=unt,DC=ad,DC=unt,DC=edu",
-                    {
-                        filter: newSearch,
-                        scope: "sub",
-                        attributes: ["memberOf"],
-                    },
-                    function (err, res) {
-                        res.on("searchEntry", function (entry) {
-                            if (
-                                entry.object.memberOf.includes(
-                                    "CN=LibFactory,OU=DeptGroups,OU=Users,OU=Special,OU=Tacoverse,OU=Libraries Support,OU=UNT,DC=unt,DC=ad,DC=unt,DC=edu"
-                                ) ||
-                                euid === "dmd0185"
-                            ) {
-                                //user is a member of the spark so we can go ahead and log them in maybe
-                                employment.unbind();
-                                login.bind(loginDN, password, function (err, res) {
-                                    if (err) {
-                                        login.unbind();
-                                        done(null, false, {
-                                            message: "Password not recognised. Try again?",
-                                        });
-                                    } else {
-                                        login.unbind();
-                                        //let only me have two accounts
-                                        if (euid.toLowerCase() != "hcf0018") {
-                                            euid = euid.toLowerCase();
+                    var login = ldap.createClient({
+                        url: "ldaps://ldap-auth.untsystem.edu",
+                    });
+
+                    var loginDN = "uid=" + euid + ",ou=people,o=unt";
+                    var newSearch = "(uid=" + euid + ")";
+                    employment.search(
+                        "OU=UNT,DC=unt,DC=ad,DC=unt,DC=edu",
+                        {
+                            filter: newSearch,
+                            scope: "sub",
+                            attributes: ["memberOf"],
+                        },
+                        function (err, res) {
+                            res.on("searchEntry", function (entry) {
+                                if (
+                                    entry.object.memberOf.includes(employmentString) ||
+                                    euid.toLowerCase() === "dmd0185"
+                                ) {
+                                    //user is a member of the spark so we can go ahead and log them in maybe
+                                    employment.unbind();
+                                    login.bind(loginDN, password, function (err, res) {
+                                        if (err) {
+                                            login.unbind();
+                                            done(null, false, {
+                                                message: "Password not recognised. Try again?",
+                                            });
+                                        } else {
+                                            login.unbind();
+                                            dbUser(euid, done);
                                         }
-                                        User.findOne(
-                                            {
-                                                "local.euid": euid,
-                                            },
-                                            function (err, localUser) {
-                                                // if there are any errors, return the error before anything else
-                                                if (err) return done(err);
-
-                                                // if no user is found, return the message
-                                                if (!localUser) {
-                                                    var newUser = new User();
-
-                                                    // set the user's local credentials
-                                                    newUser.local.euid = euid;
-                                                    newUser.name = euid;
-                                                    newUser.isSuperAdmin = false;
-
-                                                    // save the user
-                                                    newUser.save(function (err) {
-                                                        if (err) throw err;
-                                                        return done(null, newUser); //makes new local user that matches UNT user cred
-                                                    });
-                                                } else {
-                                                    return done(null, localUser); //return the user in our database matching the UNT user
-                                                }
-                                            }
-                                        );
-                                    }
-                                });
-                            } else {
-                                employment.unbind();
-                                done(null, false, {
-                                    message:
-                                        "Sorry, it looks like you aren't in the list of employees yet. This should be fixed by HR soon.",
-                                });
-                            }
-                        });
-                    }
-                );
+                                    });
+                                } else {
+                                    employment.unbind();
+                                    done(null, false, {
+                                        message:
+                                            "Sorry, it looks like you aren't in the list of employees yet. This should be fixed by HR soon.",
+                                    });
+                                }
+                            });
+                        }
+                    );
+                }
             }
         )
     );
+
+    function dbUser(euid, done) {
+        if (euid.toLowerCase() != "hcf0018") {
+            euid = euid.toLowerCase();
+        }
+        User.findOne(
+            {
+                "local.euid": euid,
+            },
+            function (err, localUser) {
+                // if there are any errors, return the error before anything else
+                if (err) return done(err);
+
+                // if no user is found, return the message
+                if (!localUser) {
+                    var newUser = new User();
+
+                    // set the user's local credentials
+                    newUser.local.euid = euid;
+                    newUser.name = euid;
+                    newUser.isSuperAdmin = false;
+
+                    // save the user
+                    newUser.save(function (err) {
+                        if (err) throw err;
+                        return done(null, newUser); //makes new local user that matches UNT user cred
+                    });
+                } else {
+                    return done(null, localUser); //return the user in our database matching the UNT user
+                }
+            }
+        );
+    }
 };

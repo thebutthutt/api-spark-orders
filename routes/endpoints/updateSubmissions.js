@@ -10,39 +10,39 @@ const gfs = require("../../storage/downloader");
 const uploader = require("../../storage/uploader");
 const logger = require("../../app/logger");
 
-let allSubmissions = submissions.find({}, function (err, res) {
-    for (let submission of res) {
-        submission.emails = [
-            {
-                templateName: "submissionRecieved",
-                timestampSent: submission.submissionDetails.timestampSubmitted,
-            },
-        ];
+// let allSubmissions = submissions.find({}, function (err, res) {
+//     for (let submission of res) {
+//         submission.emails = [
+//             {
+//                 templateName: "submissionRecieved",
+//                 timestampSent: submission.submissionDetails.timestampSubmitted,
+//             },
+//         ];
 
-        if (submission.paymentRequest.timestampPaymentRequested > new Date("1980")) {
-            submission.emails.push({
-                templateName: "submissionReviewed",
-                timestampSent: submission.paymentRequest.timestampPaymentRequested,
-            });
-        }
+//         if (submission.paymentRequest.timestampPaymentRequested > new Date("1980")) {
+//             submission.emails.push({
+//                 templateName: "submissionReviewed",
+//                 timestampSent: submission.paymentRequest.timestampPaymentRequested,
+//             });
+//         }
 
-        if (submission.payment.timestampPaid > new Date("1980")) {
-            submission.emails.push({
-                templateName: submission.payment.paymentType == "PAID" ? "paymentRecieved" : "paymentWaived",
-                timestampSent: submission.payment.timestampPaid,
-            });
-        }
+//         if (submission.payment.timestampPaid > new Date("1980")) {
+//             submission.emails.push({
+//                 templateName: submission.payment.paymentType == "PAID" ? "paymentRecieved" : "paymentWaived",
+//                 timestampSent: submission.payment.timestampPaid,
+//             });
+//         }
 
-        if (submission.pickup.timestampPickupRequested > new Date("1980")) {
-            submission.emails.push({
-                templateName: "readyForPickup",
-                timestampSent: submission.pickup.timestampPickupRequested,
-            });
-        }
+//         if (submission.pickup.timestampPickupRequested > new Date("1980")) {
+//             submission.emails.push({
+//                 templateName: "readyForPickup",
+//                 timestampSent: submission.pickup.timestampPickupRequested,
+//             });
+//         }
 
-        submission.save();
-    }
-});
+//         submission.save();
+//     }
+// });
 
 /* -------------------------------------------------------------------------- */
 /*                               Review One File                              */

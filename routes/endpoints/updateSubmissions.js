@@ -127,6 +127,22 @@ router.post("/addnote/:fileID", auth.required, async function (req, res) {
     res.status(200).send("OK");
 });
 
+router.post("/update-patron/", auth.required, async function (req, res) {
+    var submission = req.body;
+
+    //get submission and file
+    var result = await submissions.findById(submission._id);
+
+    result.patron.fname = submission.patron.fname;
+    result.patron.lname = submission.patron.lname;
+    result.patron.email = submission.patron.email;
+    result.patron.phone = submission.patron.phone;
+    result.patron.euid = submission.patron.euid;
+
+    await result.save();
+    res.status(200).send("OK");
+});
+
 /* -------------------------------------------------------------------------- */
 /*                         Complete Submission Review                         */
 /* -------------------------------------------------------------------------- */
